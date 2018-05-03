@@ -21,6 +21,8 @@ gem 'sass-rails', '~> 5.0'
 gem 'uglifier', '>= 1.3.0'
 # Transpile app-like JavaScript. Read more: https://github.com/rails/webpacker
 gem 'webpacker'
+# Integrate React.js with Rails views and controllers, the asset pipeline, or webpacker.
+gem 'react-rails'
 
 # Turbolinks makes navigating your web application faster. Read more: https://github.com/turbolinks/turbolinks
 gem 'turbolinks', '~> 5'
@@ -37,7 +39,7 @@ gem 'jbuilder', '~> 2.5'
 group :development, :test do
   # Use sqlite3 as the database for Active Record
   gem 'sqlite3'
-  # Call 'byebug' anywhere in the code to stop execution and get a debugger console
+
   gem 'rspec-rails'
   # Adds support for Capybara system testing and selenium driver
   gem 'capybara', '~> 2.13'
