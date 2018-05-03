@@ -5201,9 +5201,9 @@ semantic-ui-react@^0.80.0:
     lodash "^4.17.10"
     prop-types "^15.6.1"
 
-semantic-ui-sass@^2.2.11:
-  version "2.2.11"
-  resolved "https://registry.yarnpkg.com/semantic-ui-sass/-/semantic-ui-sass-2.2.11.tgz#f77677cfc6ebe874f0da29e2787b64facccd1f4b"
+semantic-ui-scss@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/semantic-ui-scss/-/semantic-ui-scss-1.0.0.tgz#15a91eefe71980fa8f61d9537484cb71df451864"
 
 "semver@2 || 3 || 4 || 5", semver@^5.3.0:
   version "5.5.0"

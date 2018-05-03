@@ -9,7 +9,7 @@
     "react": "^16.3.2",
     "react-dom": "^16.3.2",
     "semantic-ui-react": "^0.80.0",
-    "semantic-ui-sass": "^2.2.11"
+    "semantic-ui-scss": "^1.0.0"
   },
   "devDependencies": {
     "webpack-dev-server": "2.11.2"
