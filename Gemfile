@@ -9,8 +9,10 @@ gem 'rails', '~> 5.2.0'
 gem 'pg', '~> 1.0'
 # Use Puma as the app server
 gem 'puma', '~> 3.11'
+# Use devise-jwt for Authentication
+gem 'devise-jwt', '~> 0.5.6'
 # Build JSON APIs with ease. Read more: https://github.com/rails/jbuilder
-# gem 'jbuilder', '~> 2.5'
+gem 'jbuilder', '~> 2.7.0'
 # Use Redis adapter to run Action Cable in production
 # gem 'redis', '~> 4.0'
 # Use ActiveModel has_secure_password
@@ -32,7 +34,7 @@ group :development, :test do
   gem 'sqlite3'
   gem 'pry-byebug', '~> 3.6.0'
   gem 'faker'
-
+  gem 'dotenv-rails', '~> 2.4.0'
 end
 
 group :test do
