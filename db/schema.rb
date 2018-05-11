@@ -10,7 +10,22 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_05_09_003403) do
+ActiveRecord::Schema.define(version: 2018_05_11_005542) do
+
+  create_table "families", force: :cascade do |t|
+    t.string "family_name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "family_members", force: :cascade do |t|
+    t.integer "family_id", null: false
+    t.integer "member_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_family_members_on_family_id"
+    t.index ["member_id"], name: "index_family_members_on_member_id"
+  end
 
   create_table "members", force: :cascade do |t|
     t.string "provider", default: "email", null: false
@@ -36,6 +51,15 @@ ActiveRecord::Schema.define(version: 2018_05_09_003403) do
     t.text "tokens"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "user_role", default: 0
+    t.string "surname"
+    t.binary "image_store"
+    t.text "contacts", default: "{}"
+    t.text "addresses", default: "{}"
+    t.integer "gender"
+    t.text "bio"
+    t.date "birthday"
+    t.string "instagram"
     t.index ["confirmation_token"], name: "index_members_on_confirmation_token", unique: true
     t.index ["email"], name: "index_members_on_email", unique: true
     t.index ["reset_password_token"], name: "index_members_on_reset_password_token", unique: true
