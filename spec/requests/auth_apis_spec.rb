@@ -1,28 +1,47 @@
 require 'rails_helper'
 
 RSpec.describe "Authentication API", type: :request do
+
+  let(:member) { create(:member) }
+  let(:valid_member) { create(:member) }
+
   context 'Signing up' do
-    context 'valid registration' do
+    context 'with a valid registration' do
+      new_member = {"email" => "newmember@example.com", "password" => "password"}
       it 'sucessfully creates an account' do
-        
+        post '/v1/auth', params: new_member
+        response.body
+        expect(response).to have_http_status(200)
       end
     end
-    context 'invalid registration' do
-      context 'missing information' do
+    context 'with a invalid registration' do
+      context 'with missing information' do
+        new_member = {"email" => "newmember@example.com"}
         it 'reports an error with a message' do
-          
+          post '/v1/auth', params: new_member
+
+          expect(JSON.parse(response.body)).to include("errors")
+          expect(response).to have_http_status(422)
         end
       end
       context 'non-unique information' do
+        before do
+          Member.create(email:"newmember@example.com",password:"password")
+          Member.first
+        end
         it 'reports non-unique email' do
-          
+          new_member = {"email" => "newmember@example.com", "password" => "password"}
+
+          post '/v1/auth', params: new_member
+          response.body
+          expect(JSON.parse(response.body)).to include("errors")
+          expect(response).to have_http_status(422)
         end
       end
     end
   end
   context 'Anon Access' do
     it 'accesses unprotected' do
-      
     end
     it 'fails to access protected resources' do
       
@@ -30,25 +49,31 @@ RSpec.describe "Authentication API", type: :request do
   end
   context 'Sign in' do
     before do
-      let(:member) { create(:member) }
+      post '/v1/auth/sign_in', { params: { "email" => valid_member.email, "password" => valid_member.password } }
+      @header = response.header
     end
     context 'valid user login' do
-      it 'generates access token' do
-        
+      it 'allows user to login' do
+        post '/v1/auth/sign_in', { params: { "email" => valid_member.email, "password" => valid_member.password } }
+        expect(response).to have_http_status(200)
       end
-      it 'grants access to resource' do
-        
+      xit 'generates access token' do
       end
-      it 'grants access to resource multiple times' do
-        
+      xit 'grants access to resource' do
+      end
+      xit 'grants access to resource multiple times' do
       end
       it 'allows members to logout' do
-        
+        delete '/v1/auth/sign_out', { headers: { "uid" => valid_member.email, "client" => @header["client"], "access-token" => @header["access-token"] } }
+        expect(response).to have_http_status(200)
       end
     end
     context 'invalid password' do
       it 'rejects credentials' do
-        
+        post '/v1/auth/sign_in', { params: { "email" => valid_member.email, "password" => "foobar" } }
+
+        expect(JSON.parse(response.body)["errors"]).to include("Invalid login credentials. Please try again.")
+        expect(response).to have_http_status(401)
       end
     end
   end
