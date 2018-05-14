@@ -13,6 +13,8 @@ gem 'puma', '~> 3.11'
 gem 'devise_token_auth', '~> 0.1.36'
 # Build JSON APIs with ease. Read more: https://github.com/rails/jbuilder
 gem 'jbuilder', '~> 2.7.0'
+# ActiveModel::Serializer implementation
+gem 'active_model_serializers', '~> 0.10.0'
 # Use Redis adapter to run Action Cable in production
 # gem 'redis', '~> 4.0'
 # Use ActiveModel has_secure_password
