@@ -9,14 +9,9 @@ class API::V1::FamiliesController < ApplicationController
 
   def show
     @family = Family.find(params[:id])
-    render json: {id: @family.id, family_name: @family.family_name}
-  end
-
-  def directory
-    @family = Family.find(params[:id])
     list_of_family_members = []
-    FamilyMember.where(family_id: @family.id).each do |member| # mentor how to make this more efficient
-      serialized_member = DirectoryMemberSerializer.new( Member.find( member.member_id ) )
+    Member.joins(:family_members).where(family_members: { family_id: @family.id }).each do |member|
+      serialized_member = DirectoryMemberSerializer.new(member)
       list_of_family_members << serialized_member
     end
     render json: { "members" => list_of_family_members }

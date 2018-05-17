@@ -3,13 +3,9 @@ Rails.application.routes.draw do
     namespace :v1 do
       mount_devise_token_auth_for 'Member', at: 'auth'
       resource :member
+      resource :family 
       get 'families', action: :index, controller: 'families'
-      get 'family', to: 'families#directory', as: "directory"
-      get 'family_dashboard', to: 'families#show'
-      resource :family do #secured routes
-        
-        resource :member#, only [:index, :show]
-      end
+      # get 'family_dashboard', to: 'families#show'
     end
   end
 end
