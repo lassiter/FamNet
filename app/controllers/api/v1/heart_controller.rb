@@ -1,0 +1,2 @@
+class HeartController < ApplicationController
+end

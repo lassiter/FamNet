@@ -20,6 +20,8 @@ gem 'active_model_serializers', '~> 0.10.0'
 # Use ActiveModel has_secure_password
 # gem 'bcrypt', '~> 3.1.7'
 
+gem 'paper_trail', '~> 9.0.2'
+
 # Use ActiveStorage variant
 # gem 'mini_magick', '~> 4.8'
 
@@ -34,7 +36,6 @@ gem 'bootsnap', '>= 1.1.0', require: false
 group :production do
 end
 group :development, :test do
-  gem 'sqlite3'
   gem 'pry-byebug', '~> 3.6.0'
   gem 'faker'
   gem 'dotenv-rails', '~> 2.4.0'

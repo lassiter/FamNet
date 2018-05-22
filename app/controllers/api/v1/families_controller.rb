@@ -49,7 +49,6 @@ class API::V1::FamiliesController < ApplicationController
   private
 
   def family_params
-    # binding.pry
     # Whitelist of Params
     params.permit(:family_name)
   end

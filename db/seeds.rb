@@ -39,9 +39,31 @@ end
   FamilyMember.create(
     family_id: rand(1..Family.count),
     member_id: new_member.id
+  )  
+end
+member_size = Member.count
+100.times do
+  @member = FamilyMember.where(member_id: rand(1..member_size)).first
+  @post = Post.create(
+    body: Faker::Lorem.paragraph(2, false, 4),
+    location: [Faker::Address.latitude, Faker::Address.longitude],
+    family_id: @member.family_id,
+    member_id: @member.member_id
   )
+
+  rand(1..5).times do
+    @commenter = FamilyMember.where(family_id: @member.family_id).order("RANDOM()").first
+    comment = Comment.create(
+      member_id: @commenter.member_id,
+      post_id: @post.id,
+      body: Faker::Lorem.paragraph(1, false, 2),
+    )
+  end
+
 end
 
+puts "Posts: #{Post.count} out of 100 were created."
+puts "Comments: #{Comment.count} were created."
 puts "Families: #{Family.count} out of 5 were created."
 puts "Family Member Links: #{FamilyMember.count} out of 50 were created."
 puts "Members: #{Member.count} out of 50 were created."

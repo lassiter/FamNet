@@ -6,6 +6,9 @@ Rails.application.routes.draw do
       resource :family 
       get 'families', action: :index, controller: 'families'
       # get 'family_dashboard', to: 'families#show'
+      resources :posts do
+        resources :comments
+      end
     end
   end
 end
