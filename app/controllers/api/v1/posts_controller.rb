@@ -1,6 +1,7 @@
 class API::V1::PostsController < ApplicationController
+  before_action :authenticate_api_v1_member!
   def index
-    @posts = Post.all
+    @posts = policy_scope(Post)
     render json: @posts
   end
   def show
