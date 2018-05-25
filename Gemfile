@@ -22,6 +22,8 @@ gem 'active_model_serializers', '~> 0.10.0'
 
 gem 'paper_trail', '~> 9.0.2'
 
+gem "pundit"
+
 # Use ActiveStorage variant
 # gem 'mini_magick', '~> 4.8'
 
