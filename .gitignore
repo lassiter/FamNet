@@ -23,5 +23,8 @@
 .byebug_history
 .env
 
+# Ignore misc local scratch files such as SQL quries and etc.
+/_local_files/
+
 # Ignore master key for decrypting credentials and more.
 /config/master.key

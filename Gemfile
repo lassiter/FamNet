@@ -13,10 +13,16 @@ gem 'puma', '~> 3.11'
 gem 'devise_token_auth', '~> 0.1.36'
 # Build JSON APIs with ease. Read more: https://github.com/rails/jbuilder
 gem 'jbuilder', '~> 2.7.0'
+# ActiveModel::Serializer implementation
+gem 'active_model_serializers', '~> 0.10.0'
 # Use Redis adapter to run Action Cable in production
 # gem 'redis', '~> 4.0'
 # Use ActiveModel has_secure_password
 # gem 'bcrypt', '~> 3.1.7'
+
+gem 'paper_trail', '~> 9.0.2'
+
+gem "pundit"
 
 # Use ActiveStorage variant
 # gem 'mini_magick', '~> 4.8'
@@ -32,7 +38,6 @@ gem 'bootsnap', '>= 1.1.0', require: false
 group :production do
 end
 group :development, :test do
-  gem 'sqlite3'
   gem 'pry-byebug', '~> 3.6.0'
   gem 'faker'
   gem 'dotenv-rails', '~> 2.4.0'
