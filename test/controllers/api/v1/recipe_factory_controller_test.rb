@@ -1,6 +1,6 @@
 require 'test_helper'
 
-class RecipetagTest < ActiveSupport::TestCase
+class API::V1::RecipeFactoryControllerTest < ActionDispatch::IntegrationTest
   # test "the truth" do
   #   assert true
   # end
