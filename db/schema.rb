@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_05_21_202726) do
+ActiveRecord::Schema.define(version: 2018_05_30_002108) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -45,13 +45,21 @@ ActiveRecord::Schema.define(version: 2018_05_21_202726) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "ingredients", force: :cascade do |t|
+    t.string "title"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "interactions", force: :cascade do |t|
     t.string "type_of_interactions"
-    t.integer "comment_id"
-    t.integer "post_id"
+    t.bigint "comment_id_id"
+    t.bigint "post_id_id"
     t.integer "member_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["comment_id_id"], name: "index_interactions_on_comment_id_id"
+    t.index ["post_id_id"], name: "index_interactions_on_post_id_id"
   end
 
   create_table "likes", force: :cascade do |t|
@@ -104,8 +112,51 @@ ActiveRecord::Schema.define(version: 2018_05_21_202726) do
     t.text "edit"
     t.binary "attachment"
     t.boolean "locked", default: false
-    t.integer "family_id"
-    t.integer "member_id"
+    t.bigint "family_id"
+    t.bigint "member_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_posts_on_family_id"
+    t.index ["member_id"], name: "index_posts_on_member_id"
+  end
+
+  create_table "recipe_ingredients", force: :cascade do |t|
+    t.bigint "recipe_id", null: false
+    t.bigint "ingredient_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ingredient_id"], name: "index_recipe_ingredients_on_ingredient_id"
+    t.index ["recipe_id"], name: "index_recipe_ingredients_on_recipe_id"
+  end
+
+  create_table "recipe_tags", force: :cascade do |t|
+    t.bigint "recipe_id", null: false
+    t.bigint "tag_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["recipe_id"], name: "index_recipe_tags_on_recipe_id"
+    t.index ["tag_id"], name: "index_recipe_tags_on_tag_id"
+  end
+
+  create_table "recipes", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "description"
+    t.json "steps"
+    t.binary "attachment"
+    t.text "ingredients", array: true
+    t.text "tags", array: true
+    t.bigint "family_id"
+    t.bigint "member_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_recipes_on_family_id"
+    t.index ["member_id"], name: "index_recipes_on_member_id"
+  end
+
+  create_table "tags", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "description"
+    t.boolean "mature", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end

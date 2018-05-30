@@ -1,5 +1,5 @@
 FactoryBot.define do
-  factory :recipetag do
+  factory :recipe_tag do
     
   end
 end
