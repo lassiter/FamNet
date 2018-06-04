@@ -6,8 +6,8 @@ class CreatePosts < ActiveRecord::Migration[5.2]
       t.text :edit
       t.binary :attachment
       t.boolean :locked, default: false
-      t.refrences :family_id
-      t.refrences :member_id 
+      t.references :family
+      t.references :member
       t.timestamps
     end
   end
