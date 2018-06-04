@@ -4,8 +4,8 @@ class Interaction < ApplicationRecord
   belongs_to :post
   belongs_to :comment
   belongs_to :member
-  has_many :likes
-  has_many :hearts
+  has_many :likes, dependent: :destroy
+  has_many :hearts, dependent: :destroy
 
   enum :type_of_interactions => [:heart, :like]
 
