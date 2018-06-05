@@ -5,8 +5,6 @@
 #
 #   movies = Movie.create([{ name: 'Star Wars' }, { name: 'Lord of the Rings' }])
 #   Character.create(name: 'Luke', movie: movies.first)
-require "pry"
-unless Family.count < 5 || Member.count < 50
   5.times do
     Family.create(
       family_name: Faker::Name.last_name
@@ -52,7 +50,14 @@ unless Family.count < 5 || Member.count < 50
       family_id: @member.family_id,
       member_id: @member.member_id
     )
-
+    rand(0..14).times do
+      Interaction.create(
+        member_id: FamilyMember.where(family_id: @member.family_id).order("RANDOM()").first.member_id,
+        interaction_type: "Post",
+        interaction_id: @post.id,
+        emotive: [:heart, :like].sample
+      )
+    end
     rand(1..5).times do
       @commenter = FamilyMember.where(family_id: @member.family_id).order("RANDOM()").first
       comment = Comment.create(
@@ -60,10 +65,17 @@ unless Family.count < 5 || Member.count < 50
         post_id: @post.id,
         body: Faker::Lorem.paragraph(1, false, 2),
       )
+      rand(0..3).times do
+        Interaction.create(
+          member_id: FamilyMember.where(family_id: @member.family_id).order("RANDOM()").first.member_id,
+          interaction_type: "Comment",
+          interaction_id: comment.id,
+          emotive: [:heart, :like].sample
+        )
+      end
     end
 
   end
-end
 25.times do
 
   @recipe_hash = 
@@ -85,7 +97,6 @@ end
   end
   @recipe_hash[:tags_list] = Array.new(rand(3..9)) { Tag.find_or_create_by(title: Faker::Vehicle.manufacture) }
   @recipe_hash[:tags_list].each {|item| item.update(description: Faker::RickAndMorty.quote, mature: [true,false].sample)}
-  # binding.pry
   @recipe = Recipe.create({
     title: Faker::Food.dish,
     description: Faker::Lorem.sentence(5, true, 5),

@@ -1,2 +1,0 @@
-class RecipeTagsController < ApplicationController
-end
