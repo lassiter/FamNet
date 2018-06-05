@@ -1,4 +1,5 @@
 class Recipe < ApplicationRecord
+  include Interaction
   belongs_to :member
 
   has_many :recipe_ingredients

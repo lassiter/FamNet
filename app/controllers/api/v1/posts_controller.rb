@@ -11,7 +11,6 @@ class API::V1::PostsController < ApplicationController
 
   def create
     @post = Post.new(post_params)
-    params
 
     if @post.save
       render json: @post
