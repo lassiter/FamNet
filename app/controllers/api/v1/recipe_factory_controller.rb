@@ -1,6 +1,4 @@
 class API::V1::RecipeFactoryController < ApplicationController
-require 'pry'
-require 'pry-byebug'
   def initialize(recipe_params)
     @title = recipe_params["title"].to_s                                              # string
 
@@ -14,7 +12,6 @@ require 'pry-byebug'
     end
     
     @tags_object_array = []
-    binding.pry
     @tags = recipe_params["tags_list"].each do |tag|   
       t = tag
       tag = Tag.find_or_create_by(title: tag["title"].titleize)
@@ -34,7 +31,6 @@ require 'pry-byebug'
   end
   
   def result
-    binding.pry
     Recipe.new({
       title: @title, # string
       description: @description, # text

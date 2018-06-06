@@ -10,7 +10,7 @@ class Member < ActiveRecord::Base
   has_many :families, through: :family_members
   has_many :posts
   has_many :comments
-  has_many :likes
+  
 
   enum :gender => [:female, :male, :nonbinary]
   enum :user_role => [:user, :moderator, :admin, :owner]

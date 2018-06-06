@@ -10,10 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_05_30_002108) do
+ActiveRecord::Schema.define(version: 2018_06_04_211937) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "comment_on_comments", force: :cascade do |t|
+    t.text "body", null: false
+    t.text "edit"
+    t.integer "comment_id"
+    t.integer "member_id"
+    t.binary "attachment"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
 
   create_table "comments", force: :cascade do |t|
     t.text "body", null: false
@@ -40,29 +50,8 @@ ActiveRecord::Schema.define(version: 2018_05_30_002108) do
     t.index ["member_id"], name: "index_family_members_on_member_id"
   end
 
-  create_table "hearts", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-  end
-
   create_table "ingredients", force: :cascade do |t|
     t.string "title"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-  end
-
-  create_table "interactions", force: :cascade do |t|
-    t.string "type_of_interactions"
-    t.bigint "comment_id_id"
-    t.bigint "post_id_id"
-    t.integer "member_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["comment_id_id"], name: "index_interactions_on_comment_id_id"
-    t.index ["post_id_id"], name: "index_interactions_on_post_id_id"
-  end
-
-  create_table "likes", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
@@ -118,6 +107,17 @@ ActiveRecord::Schema.define(version: 2018_05_30_002108) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_posts_on_family_id"
     t.index ["member_id"], name: "index_posts_on_member_id"
+  end
+
+  create_table "reactions", force: :cascade do |t|
+    t.bigint "member_id", null: false
+    t.integer "emotive"
+    t.string "interaction_type", null: false
+    t.bigint "interaction_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["interaction_type", "interaction_id"], name: "index_reactions_on_interaction_type_and_interaction_id"
+    t.index ["member_id"], name: "index_reactions_on_member_id"
   end
 
   create_table "recipe_ingredients", force: :cascade do |t|
