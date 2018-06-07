@@ -9,12 +9,16 @@ Rails.application.routes.draw do
       resource :member
       resource :family 
       resources :reactions, only: [:create, :destroy]
+      resources :events_rsvps, only: [:create, :destroy]
       get 'families', action: :index, controller: 'families'
       # get 'family_dashboard', to: 'families#show'
       resources :posts do
         resources :reactions, only: [:index]
         resources :comments do
           resources :reactions, only: [:index]
+          resources :comment_replys do
+            resources :reactions, only: [:index]
+          end
         end
       end
       resource :recipes do

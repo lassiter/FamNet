@@ -8,6 +8,8 @@ class Member < ActiveRecord::Base
   has_many :recipes
   has_many :family_members, dependent: :destroy
   has_many :families, through: :family_members
+  has_many :events
+  has_many :event_rsvps
   has_many :posts
   has_many :comments
   
