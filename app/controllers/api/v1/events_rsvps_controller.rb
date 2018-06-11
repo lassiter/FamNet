@@ -3,7 +3,7 @@ class API::V1::EventsRsvpsController < ApplicationController
   def create
     @event_rsvp = EventRsvp.new(event_rsvp_params)
 
-    unless EventRsvp.where(event_id: params[:event_rsvp][:event_id], member_id: params[:event_rsvp][:member_id]).count > 0
+    unless EventRsvp.any?(event_id: params[:event_rsvp][:event_id], member_id: params[:event_rsvp][:member_id])
       if @event_rsvp.save
         render json: @event_rsvp
       else
@@ -11,6 +11,16 @@ class API::V1::EventsRsvpsController < ApplicationController
       end
     else
       render json: {{ errors: "Duplicate RSVP Found"} =>  @event_rsvp }, status: :conflict
+    end
+  end
+
+  def destroy
+    begin
+      @event_rsvp = EventRsvp.find(params[:id])
+      @event_rsvp.destroy
+      render json: {}, status: :no_content
+    rescue ActiveRecord::RecordNotFound
+      render :json => {}, :status => :not_found
     end
   end
 

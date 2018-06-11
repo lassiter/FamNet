@@ -12,4 +12,7 @@ class Comment < ApplicationRecord
     CommentReply.where(comment_id: ids)
   end
 
+  def mentioned_members
+    MentionParser.new(body).members
+  end
 end

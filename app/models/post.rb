@@ -9,4 +9,7 @@ class Post < ApplicationRecord
   validates :body, length: { minimum: 1 }
   validates_presence_of :body, :unless => :attachment?
 
+  def mentioned_members
+    MentionParser.new(body).members
+  end
 end

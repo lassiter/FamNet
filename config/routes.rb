@@ -12,6 +12,7 @@ Rails.application.routes.draw do
       resources :events_rsvps, only: [:create, :destroy]
       get 'families', action: :index, controller: 'families'
       # get 'family_dashboard', to: 'families#show'
+      resources :events
       resources :posts do
         resources :reactions, only: [:index]
         resources :comments do
