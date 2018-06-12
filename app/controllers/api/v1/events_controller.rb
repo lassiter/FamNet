@@ -30,10 +30,11 @@ class API::V1::EventsController < ApplicationController
   end
 
   def create
-    @event = Event.new(event_params)
+    binding.pry
+    @event = API::V1::EventFactoryController.new(event_params).result
 
     if @event.save
-      render json: @event
+      render json: {"event" => @event, "event_rsvps"=> @event.event_rsvps}, status: :ok
     else
       render json: { errors: @event.errors.full_messages }, status: :unprocessable_entity
     end
