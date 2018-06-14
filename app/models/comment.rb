@@ -1,5 +1,6 @@
 class Comment < ApplicationRecord
   include Interaction
+  include Notifiable
   
   has_paper_trail
 
