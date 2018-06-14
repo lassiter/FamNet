@@ -28,7 +28,7 @@ class API::V1::FamiliesController < ApplicationController
 
   def create
     @family = Family.new(family_params)
-    puts @family.inspect
+    @family.inspect
     if @family.save
       render json: @family
     else
