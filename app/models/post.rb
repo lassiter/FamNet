@@ -1,6 +1,7 @@
 class Post < ApplicationRecord
   include Interaction
   include Commentable
+  include Notifiable
   has_paper_trail
 
   belongs_to :family
