@@ -9,8 +9,8 @@ class API::V1::RegistrationsController < DeviseTokenAuth::RegistrationsControlle
 private
 
   def create_new_family(family_name)
-    new_family = Family.where(family_name: family_name).first_or_create
-    new_family_member = FamilyMember.where(family_id: new_family.id, member_id: @resource.id).first_or_create
+    new_family = Family.find_or_create_by(family_name: family_name)
+    new_family_member = FamilyMember.find_or_create_by(family_id: new_family.id, member_id: @resource.id)
   end
   def sign_up_params
     params.require(:family).permit(:family_name)
