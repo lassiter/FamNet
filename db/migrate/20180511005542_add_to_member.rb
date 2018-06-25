@@ -2,7 +2,6 @@ class AddToMember < ActiveRecord::Migration[5.2]
   def change
     change_table :members do |t|
       ## User Info
-      t.integer :user_role, default: 0
       t.string :surname
       t.binary :image_store
       t.json :contacts, default: "{}"

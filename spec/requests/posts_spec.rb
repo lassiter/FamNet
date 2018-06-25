@@ -56,7 +56,7 @@ RSpec.describe "Post API", type: :request do
       end
       it 'shows links to relevant resources' do
         get '/v1/posts', :headers => @auth_headers
-        binding.pry
+        
         json = JSON.parse(response.body)
         actual = json["relationships"]
         expected = {"reactions" => Rails.application.routes.url_helpers.api_v1_reactions_path, "comments" => Rails.application.routes.url_helpers.api_v1_post_comments_path(":post_id"), "comment" => Rails.application.routes.url_helpers.api_v1_post_comment_path(":post_id", ":comment_id")}
@@ -522,7 +522,7 @@ RSpec.describe "Post API", type: :request do
       end
       it 'shows links to relevant resources' do
         get '/v1/posts', :headers => @auth_headers
-        binding.pry
+        
         json = JSON.parse(response.body)
         actual = json["relationships"]
         expected = {"reactions" => Rails.application.routes.url_helpers.api_v1_reactions_path, "comments" => Rails.application.routes.url_helpers.api_v1_post_comments_path(":post_id"), "comment" => Rails.application.routes.url_helpers.api_v1_post_comment_path(":post_id", ":comment_id")}
