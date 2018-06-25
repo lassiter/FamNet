@@ -18,7 +18,7 @@ class Member < ActiveRecord::Base
   enum :user_role => [:user, :moderator, :admin, :owner]
 
   validates :name, presence: true, format: { with: /\A[a-zA-Z]+\z/, message: "only allows letters" }, length: { minimum: 1 }
-  validates :surname, presence: true, format: { with: /\A[\w]+\z/, message: "only allows letters" }, length: { minimum: 1 }
+  validates :surname, presence: true, format: { with: /\A\w[A-Za-z\u00C0-\u00D6\u00D8-\u00f6\u00f8-\u00ff\s'-]+\z/, message: "only allows letters" }, length: { minimum: 1 }
   # Regex is from http://guides.rubyonrails.org/active_record_validations.html
   validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i, message: "invalid email format" }, length: { minimum: 1 }
   validates :bio, allow_blank: true, length: { maximum: 500 }

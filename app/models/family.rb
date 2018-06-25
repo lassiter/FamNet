@@ -4,5 +4,5 @@ class Family < ApplicationRecord
   has_many :posts, dependent: :destroy
   has_many :events, dependent: :destroy
   
-  validates :family_name, presence: true, format: { with: /\A[a-zA-Z]+\z/, message: "only allows letters" }, length: { minimum: 1 }
+  validates :family_name, presence: true, format: { with: /\A\w[A-Za-z\u00C0-\u00D6\u00D8-\u00f6\u00f8-\u00ff\s'-]+\z/, message: "only allows letters" }, length: { minimum: 1 }
 end

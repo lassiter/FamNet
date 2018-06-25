@@ -150,7 +150,7 @@ ActiveRecord::Schema.define(version: 2018_06_14_010952) do
 
   create_table "posts", force: :cascade do |t|
     t.text "body", null: false
-    t.integer "location", array: true
+    t.decimal "location", precision: 15, scale: 10, array: true
     t.text "edit"
     t.binary "attachment"
     t.boolean "locked", default: false

@@ -1,8 +1,5 @@
 Rails.application.routes.draw do
-  get 'reactions/index'
-  get 'reactions/show'
-  get 'reactions/create'
-  get 'reactions/destroy'
+
   namespace :api, :path => "" do
     namespace :v1 do
       mount_devise_token_auth_for 'Member', at: 'auth', controllers: {
@@ -11,7 +8,7 @@ Rails.application.routes.draw do
         :passwords => 'devise_token_auth/passwords',
         :token_validations => 'devise_token_auth/token_validations'
       }
-
+      resources :reaction, only: [:create, :destroy]
       resource :member
       resource :family 
       resources :reactions, only: [:create, :destroy]

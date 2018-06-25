@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe "RecipeFactoryController", type: :request do
+RSpec.describe "RecipeFactories", type: :request do
   describe "GET /recipe_factories" do
     it "works! (now write some real specs)" do
       get recipe_factories_path

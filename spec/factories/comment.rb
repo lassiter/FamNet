@@ -5,5 +5,4 @@ FactoryBot.define do
     created_at Faker::Date.between(2.weeks.ago, Date.today)
     updated_at Faker::Date.between(2.weeks.ago, Date.today)
   end
-  
 end
