@@ -50,29 +50,30 @@
       family_id: @member.family_id,
       member_id: @member.member_id
     )
-    rand(0..14).times do
-      Interaction.create(
-        member_id: FamilyMember.where(family_id: @member.family_id).order("RANDOM()").first.member_id,
-        interaction_type: "Post",
-        interaction_id: @post.id,
-        emotive: [:heart, :like].sample
-      )
-    end
+    # rand(0..14).times do
+    #   # Interaction.create(
+    #   #   member_id: FamilyMember.where(family_id: @member.family_id).order("RANDOM()").first.member_id,
+    #   #   interaction_type: "Post",
+    #   #   interaction_id: @post.id,
+    #   #   emotive: [:heart, :like].sample
+    #   # )
+    # end
     rand(1..5).times do
       @commenter = FamilyMember.where(family_id: @member.family_id).order("RANDOM()").first
       comment = Comment.create(
         member_id: @commenter.member_id,
-        post_id: @post.id,
+        commentable_type: "Post",
+        commentable_id: @post.id,
         body: Faker::Lorem.paragraph(1, false, 2),
       )
-      rand(0..3).times do
-        Interaction.create(
-          member_id: FamilyMember.where(family_id: @member.family_id).order("RANDOM()").first.member_id,
-          interaction_type: "Comment",
-          interaction_id: comment.id,
-          emotive: [:heart, :like].sample
-        )
-      end
+      # rand(0..3).times do
+      #   Interaction.create(
+      #     member_id: FamilyMember.where(family_id: @member.family_id).order("RANDOM()").first.member_id,
+      #     interaction_type: "Comment",
+      #     interaction_id: comment.id,
+      #     emotive: [:heart, :like].sample
+      #   )
+      # end
     end
 
   end

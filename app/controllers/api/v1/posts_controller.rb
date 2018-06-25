@@ -11,7 +11,6 @@ class API::V1::PostsController < ApplicationController
 
   def create
     @post = Post.new(post_params)
-
     if @post.save
       render json: @post
     else
@@ -42,6 +41,6 @@ class API::V1::PostsController < ApplicationController
 
   private
     def post_params
-      params.require(:post).permit(:body, :location, :attachment, :locked, :family_id, :member_id)
+      params.require(:post).permit(:body, { :location => [] }, :attachment, :locked, :family_id, :member_id)
     end
 end

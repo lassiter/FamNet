@@ -10,29 +10,70 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_06_04_211937) do
+ActiveRecord::Schema.define(version: 2018_06_14_010952) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
-  create_table "comment_on_comments", force: :cascade do |t|
+  create_table "comment_replies", force: :cascade do |t|
     t.text "body", null: false
     t.text "edit"
-    t.integer "comment_id"
-    t.integer "member_id"
-    t.binary "attachment"
+    t.bigint "comment_id"
+    t.bigint "member_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["comment_id"], name: "index_comment_replies_on_comment_id"
+    t.index ["member_id"], name: "index_comment_replies_on_member_id"
   end
 
   create_table "comments", force: :cascade do |t|
     t.text "body", null: false
     t.text "edit"
-    t.integer "post_id"
+    t.string "commentable_type", null: false
+    t.bigint "commentable_id", null: false
     t.integer "member_id"
     t.binary "attachment"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["commentable_type", "commentable_id"], name: "index_comments_on_commentable_type_and_commentable_id"
+  end
+
+  create_table "event_rsvps", force: :cascade do |t|
+    t.integer "party_size", default: 1, null: false
+    t.integer "rsvp", default: 0, null: false
+    t.boolean "bringing_food", default: false
+    t.bigint "recipe_id"
+    t.string "non_recipe_description"
+    t.integer "serving", default: 0
+    t.bigint "member_id"
+    t.text "party_companions", array: true
+    t.bigint "event_id"
+    t.text "rsvp_note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_id"], name: "index_event_rsvps_on_event_id"
+    t.index ["member_id"], name: "index_event_rsvps_on_member_id"
+    t.index ["recipe_id"], name: "index_event_rsvps_on_recipe_id"
+  end
+
+  create_table "events", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "description"
+    t.binary "attachment"
+    t.datetime "event_start", null: false
+    t.datetime "event_end"
+    t.boolean "event_allday", default: false
+    t.integer "location", array: true
+    t.boolean "potluck", default: false
+    t.boolean "locked", default: false
+    t.bigint "family_id"
+    t.bigint "member_id"
+    t.bigint "event_rsvp_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_rsvp_id"], name: "index_events_on_event_rsvp_id"
+    t.index ["family_id"], name: "index_events_on_family_id"
+    t.index ["member_id"], name: "index_events_on_member_id"
   end
 
   create_table "families", force: :cascade do |t|
@@ -95,9 +136,21 @@ ActiveRecord::Schema.define(version: 2018_06_04_211937) do
     t.index ["uid", "provider"], name: "index_members_on_uid_and_provider", unique: true
   end
 
+  create_table "notifications", force: :cascade do |t|
+    t.string "notifiable_type", null: false
+    t.bigint "notifiable_id", null: false
+    t.bigint "member_id", null: false
+    t.boolean "mentioned", default: false
+    t.boolean "viewed"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["member_id"], name: "index_notifications_on_member_id"
+    t.index ["notifiable_type", "notifiable_id"], name: "index_notifications_on_notifiable_type_and_notifiable_id"
+  end
+
   create_table "posts", force: :cascade do |t|
     t.text "body", null: false
-    t.integer "location", array: true
+    t.decimal "location", precision: 15, scale: 10, array: true
     t.text "edit"
     t.binary "attachment"
     t.boolean "locked", default: false

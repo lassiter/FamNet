@@ -6,7 +6,8 @@ require File.expand_path('../../config/environment', __FILE__)
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 require 'rspec/rails'
 # Add additional requires below this line. Rails is not loaded until this point!
-
+require 'devise'
+Dir[Rails.root.join("spec/support/**/*.rb")].each {|f| require f}
 # Requires supporting ruby files with custom matchers and macros, etc, in
 # spec/support/ and its subdirectories. Files matching `spec/**/*_spec.rb` are
 # run as spec files by default. This means that files in spec/support that end
@@ -57,5 +58,11 @@ RSpec.configure do |config|
 
   # Factory Bot
   config.include FactoryBot::Syntax::Methods
+
+  # Devise Helper
+  config.include Devise::Test::ControllerHelpers, type: :controller
+  # Authentication Helper
+  config.include AuthenticationHelper, type: :request
+
 
 end

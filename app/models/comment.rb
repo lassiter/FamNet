@@ -1,9 +1,19 @@
 class Comment < ApplicationRecord
   include Interaction
-  has_paper_trail
+  include Notifiable
   
+  has_paper_trail
+
+  belongs_to :commentable, polymorphic: true
   belongs_to :member
-  belongs_to :post
-  has_many :commentoncomment, dependent: :destroy
-  has_many :interactions, as: :correlation, dependent: :destroy
+
+  has_many :comment_replies
+  
+  def self.comment_replies
+    CommentReply.where(comment_id: ids)
+  end
+
+  def mentioned_members
+    MentionParser.new(body).members
+  end
 end
