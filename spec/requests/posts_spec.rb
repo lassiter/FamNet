@@ -2,7 +2,7 @@ require 'rails_helper'
 RSpec.describe "Post API", type: :request do
   before do
     @family = FactoryBot.create(:family)
-    family_member = FactoryBot.create(:family_member, family_id: @family.id)
+    family_member = FactoryBot.create(:family_member, family_id: @family.id, authorized_at: DateTime.now)
     @member = family_member.member
     @member_family_id = family_member.family_id
   end
@@ -24,68 +24,55 @@ RSpec.describe "Post API", type: :request do
       end
       it 'and can get all of the records available to the Member\'s policy via index' do
         get '/v1/posts', :headers => @auth_headers
+
         json = JSON.parse(response.body) 
-        expected = @compareable.first
+        expected = @comparable.first
         actual = json["data"].first
-        expect(actual["id"]).to eq(expected.id)
-        expect(json.count).to eq(comparable.count)
+        expect(actual["id"].to_i).to eq(expected.id)
+        expect(json["data"].count).to eq(@comparable.count)
         expect(response).to have_http_status(200)
       end
       it 'and getting the index returns the count and type of reactions for each record' do
         get '/v1/posts', :headers => @auth_headers
         json = JSON.parse(response.body)
-        expected = @compareable.first.reactions
-        actual = json["relationships"]["reactions"]
-        expect(actual).to exist
+        expected = @comparable.first.reactions
+        actual = json["data"].first["relationships"]["reactions"]["data"]
         expect(actual).to eq(expected)
       end
       it 'and getting the index returns the comment_id each record' do
         get '/v1/posts', :headers => @auth_headers
         json = JSON.parse(response.body)
-        expected = @compareable.first.comments
-        actual = json["relationships"]["comments"]
-        expect(actual).to exist
-        expect(actual).to eq(expected)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/posts', :headers => @auth_headers
-        json = JSON.parse(response.body)
-        actual = json["relationships"]
-        expect(actual["reactions"]).to eq("reactions")
-        expect(actual["comments"]).to eq("comments")
+        expected = @comparable.first.comments
+        actual = json["data"].first["relationships"]["comments"]
+        expect(actual).to include("links")
+        expect(actual["data"]).to eq(expected)
       end
       it 'shows links to relevant resources' do
         get '/v1/posts', :headers => @auth_headers
         
         json = JSON.parse(response.body)
-        actual = json["relationships"]
-        expected = {"reactions" => Rails.application.routes.url_helpers.api_v1_reactions_path, "comments" => Rails.application.routes.url_helpers.api_v1_post_comments_path(":post_id"), "comment" => Rails.application.routes.url_helpers.api_v1_post_comment_path(":post_id", ":comment_id")}
-        expect(actual["reactions"]).to eq("reactions")
-        expect(actual["comments"]).to eq("comments")
-        expect(actual["comment"]).to eq("comment")
+        actual = json["data"].first["relationships"]
+        expect(actual).to include("reactions")
+        expect(actual).to include("comments")
+        expect(actual).to include("member")
       end
     end
-    context "GET /post/:id Posts#show" do
+    context "GET /posts/:id Posts#show" do
       before do
-        @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id )
-        3.times {
-          FactoryBot.create(:comment, commentable_type: "Post", commentable_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id )
-          rand(1..2).times {
-            FactoryBot.create(:comment_reply, comment_id: @comparable.id, member_id: FamilyMember.where(family_id: @member_family_id).order("RANDOM()").first )
-          }
-        }
+        @comparable = FactoryBot.create(:post_with_children, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id )
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
       it "shows 200 status and matches comparable" do
-        get "/v1/post/#{@comparable.id}", :headers => @auth_headers
+        get "/v1/posts/#{@comparable.id}", :headers => @auth_headers
+
         json = JSON.parse(response.body)
-        actual = json["data"]
+        actual = json["data"]["attributes"]
 
 
         expect(response).to have_http_status(200)
-        expect(actual["id"]).to eq(@comparable.id)
+        expect(json["data"]["id"].to_i).to eq(@comparable.id)
         expect(actual["body"]).to eq(@comparable.body)
         expect(actual["edit"]).to eq(@comparable.edit)
         expect(actual["location"]).to eq(@comparable.location)
@@ -95,16 +82,17 @@ RSpec.describe "Post API", type: :request do
         expect(actual["member_id"]).to eq(@comparable.member_id)
       end
       it 'and it shows the requested post\'s Comments with CommentReplies' do
-        get "/v1/post/#{@comparable.id}", :headers => @auth_headers
+        get "/v1/posts/#{@comparable.id}", :headers => @auth_headers
+        binding.pry
         json = JSON.parse(response.body)
-        actual = json["relationships"]["comment"]["data"] # array of comments
+        actual = json["data"]["relationships"]["comments"]["data"] # array of comments
 
         actual_comments = actual.first # first json comment
         expected_comments = @comparable.comments.first #first active record comment
-
+        binding.pry
         actual_comment_replies = actual_comments.comment_replies # array of comment replies from first json comment
         expected_comment_replies = expected_comments.comment_replies # array of comment replies from first active record comment
-        
+
 
         expect(actual.count).to eq(@comparable.comments.count)
 
@@ -126,9 +114,9 @@ RSpec.describe "Post API", type: :request do
 
       end
       it 'and it shows the requested post\'s Reactions' do
-        get "/v1/post/#{@comparable.id}", :headers => @auth_headers
+        get "/v1/posts/#{@comparable.id}", :headers => @auth_headers
         json = JSON.parse(response.body)
-        actual = json["relationships"]["reaction"]["data"]
+        actual = json["data"]["relationships"]["reaction"]["data"]
         expected = @comparable.reactions
         expect(actual.count).to eq(expected.count)
 
@@ -142,12 +130,12 @@ RSpec.describe "Post API", type: :request do
         expect(actual_reaction["member_id"]).to eq(expected_reaction.member_id)      
       end
       it 'shows the relationships and links to them in the json package' do
-        get "/v1/post/#{@comparable.id}", :headers => @auth_headers
+        get "/v1/posts/#{@comparable.id}", :headers => @auth_headers
         json = JSON.parse(response.body)
         actual_post_links = json["data"]["links"]
-        actual_reaction_links = json["relationships"]["reaction"]["data"]["links"]
-        actual_comment_links = json["relationships"]["comment"]["data"]["links"]
-        actual_comment_reply_links = json["relationships"]["comment"]["data"]["relationships"]["comment_reply"]["data"]["links"]
+        actual_reaction_links = json["data"]["relationships"]["reaction"]["data"]["links"]
+        actual_comment_links = json["data"]["relationships"]["comment"]["data"]["links"]
+        actual_comment_reply_links = json["data"]["relationships"]["comment"]["data"]["relationships"]["comment_reply"]["data"]["links"]
 
         expected_resource = @comparable
         expected_reaction = @comparable.reactions.first
@@ -166,16 +154,15 @@ RSpec.describe "Post API", type: :request do
 
       end
       it 'shows links to relevant resources' do
-        get "/v1/post/#{@comparable.id}", :headers => @auth_headers
+        get "/v1/posts/#{@comparable.id}", :headers => @auth_headers
         json = JSON.parse(response.body)
-        actual = json["relationships"]
-        expected = {"reactions" => Rails.application.routes.url_helpers.api_v1_reactions_path, "comments" => Rails.application.routes.url_helpers.api_v1_post_comments_path(":post_id"), "comment" => Rails.application.routes.url_helpers.api_v1_post_comment_path(":post_id", ":comment_id")}
-        expect(actual["reactions"]).to eq("reactions")
-        expect(actual["comments"]).to eq("comments")
-        expect(actual["comment"]).to eq("comment")
+        actual = json["data"]["relationships"]
+        expect(actual).to include("reactions")
+        expect(actual).to include("comments")
+        expect(actual).to include("member")
       end
     end
-    context "GET /posts Posts#create" do
+    context "POST /posts Posts#create" do
       before do
        @comparable = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
        @create_request_params = {
@@ -198,26 +185,25 @@ RSpec.describe "Post API", type: :request do
         post '/v1/posts', :params => @create_request_params, :headers => @auth_headers
         
         json = JSON.parse(response.body)
-        actual = json["data"]
+        actual = json["data"]["attributes"]
 
 
         expect(response).to have_http_status(200)
         expect(actual["body"]).to eq(@comparable.body)
-        expect(actual["location"]).to eq(@comparable.location)
-        expect(actual["family_id"]).to eq(@comparable.family_id)
-        expect(actual["member_id"]).to eq(@comparable.member_id)
+        expect(actual["location"]).to eq(@comparable.location) # currently dec needs to be float
+        expect(actual["family-id"]).to eq(@comparable.family_id)
+        expect(actual["member-id"]).to eq(@comparable.member_id)
       end
       it 'shows the relationships and links to them in the json package' do
         post '/v1/posts', :params => @create_request_params, :headers => @auth_headers
         json = JSON.parse(response.body)
-        actual = json["relationships"]
-        expected = {"reactions" => Rails.application.routes.url_helpers.api_v1_reactions_path, "comments" => Rails.application.routes.url_helpers.api_v1_post_comments_path(":post_id"), "comment" => Rails.application.routes.url_helpers.api_v1_post_comment_path(":post_id", ":comment_id")}
-        expect(actual["reactions"]).to eq("reactions")
-        expect(actual["comments"]).to eq("comments")
-        expect(actual["comment"]).to eq("comment")
+        actual = json["data"]["relationships"]
+        expect(actual).to include("reactions")
+        expect(actual).to include("comments")
+        expect(actual).to include("member")
       end
     end
-    context "GET /posts Posts#update" do
+    context "PUT - PATCH /posts/:id Posts#update" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
         @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: @member.id )
@@ -227,200 +213,184 @@ RSpec.describe "Post API", type: :request do
           "id": @comparable.id,
           "post": {
             "id": @comparable.id,
-            "family_id": @comparable.family_id,
-            "member_id": @comparable.member_id,
-            "body": update_put.body,
-            "location": update_put.location,
-            "edit": update_put.edit,
-            "attachment": update_put.attachment,
-            "locked": update_put.locked,
-            "created_at": "2018-06-16T22:40:39.363Z",
-            "updated_at": update_put.updated_at
+            "attributes": {
+              "family_id": @comparable.family_id,
+              "member_id": @comparable.member_id,
+              "body": update_put.body,
+              "location": update_put.location,
+              "edit": update_put.edit,
+              "attachment": update_put.attachment,
+              "locked": update_put.locked,
+              "created_at": "2018-06-16T22:40:39.363Z",
+              "updated_at": update_put.updated_at
+            }
           }
         }
         @update_patch_request_params = {
           "id": @comparable.id,
           "post": {
-            "body": update_patch.body
+            "id": @comparable.id,
+            "attributes": {
+              "body": update_patch.body
+            }
           }
         }
       end
       it "#put 200 status and matches the json for the putted post" do
         put "/v1/posts/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
+        expected = @update_put_request_params[:post][:attributes]
         
         json = JSON.parse(response.body)
-        actual = json["data"]
-
+        actual = json["data"]["attributes"]
+        
         expect(response).to have_http_status(200)
-        expect(actual["body"]).to eq(@update_put_request_params.body)
-        expect(actual["location"]).to eq(@update_put_request_params.location)
-        expect(actual["family_id"]).to eq(@update_put_request_params.family_id)
-        expect(actual["member_id"]).to eq(@update_put_request_params.member_id)
-        expect(actual["attachment"]).to eq(@update_put_request_params.attachment)
-        expect(actual["edit"]).to eq(@update_put_request_params.edit)
-        expect(actual["created_at"]).to_not eq(@update_put_request_params.created_at)
-        expect(actual["updated_at"]).to eq(@update_put_request_params.updated_at)
+        expect(actual["body"]).to eq(expected[:body])
+        expect(actual["location"]).to eq(expected[:location])
+        expect(actual["family-id"]).to eq(expected[:family_id])
+        expect(actual["member-id"]).to eq(expected[:member_id])
+        expect(actual["attachment"]).to eq(expected[:attachment])
+        expect(actual["edit"]).to eq(expected[:edit])
+        expect(actual["created-at"].to_datetime).to_not eq(expected[:created_at])
+        expect(actual["updated-at"].to_datetime).to eq(expected[:updated_at])
       end
       it "#patch 200 status and can replace a single attribute and it returns the json for the patched post" do
         patch "/v1/posts/#{@comparable.id}", :params => @update_patch_request_params, :headers => @auth_headers
+        expected = @update_patch_request_params[:post][:attributes]
         
         json = JSON.parse(response.body)
         actual = json["data"]
-
         expect(response).to have_http_status(200)
-        expect(actual["id"]).to eq(@comparable.id)
-        expect(actual["body"]).to eq(@update_patch_request_params.body)
-        expect(actual["edit"]).to eq(@comparable.edit)
-        expect(actual["location"]).to eq(@comparable.location)
-        expect(actual["attachment"]).to eq(@comparable.attachment)
-        expect(actual["locked"]).to eq(@comparable.locked)
-        expect(actual["family_id"]).to eq(@comparable.family_id)
-        expect(actual["member_id"]).to eq(@comparable.member_id)
+        expect(actual["id"].to_i).to eq(@comparable.id)
+        expect(actual["attributes"]["body"]).to eq(expected[:body])
+        expect(actual["attributes"]["edit"]).to eq(@comparable.edit)
+        expect(actual["attributes"]["location"]).to eq(@comparable.location)
+        expect(actual["attributes"]["attachment"]).to eq(@comparable.attachment)
+        expect(actual["attributes"]["locked"]).to eq(@comparable.locked)
+        expect(actual["attributes"]["family-id"]).to eq(@comparable.family_id)
+        expect(actual["attributes"]["member-id"]).to eq(@comparable.member_id)
       end
       it '#patch shows the relationships and links to them in the json package' do
         patch "/v1/posts/#{@comparable.id}", :params => @update_patch_request_params, :headers => @auth_headers
         json = JSON.parse(response.body)
-        actual = json["relationships"]
-        expected = {"reactions" => Rails.application.routes.url_helpers.api_v1_reactions_path, "comments" => Rails.application.routes.url_helpers.api_v1_post_comments_path(":post_id"), "comment" => Rails.application.routes.url_helpers.api_v1_post_comment_path(":post_id", ":comment_id")}
-        expect(actual["reactions"]).to eq("reactions")
-        expect(actual["comments"]).to eq("comments")
-        expect(actual["comment"]).to eq("comment")
+        actual = json["data"]["relationships"]
+        expect(actual).to include("reactions")
+        expect(actual).to include("comments")
+        expect(actual).to include("member")
       end
       it '#put shows the relationships and links to them in the json package' do
         patch "/v1/posts/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         json = JSON.parse(response.body)
-        actual = json["relationships"]
-        expected = {"reactions" => Rails.application.routes.url_helpers.api_v1_reactions_path, "comments" => Rails.application.routes.url_helpers.api_v1_post_comments_path(":post_id"), "comment" => Rails.application.routes.url_helpers.api_v1_post_comment_path(":post_id", ":comment_id")}
-        expect(actual["reactions"]).to eq("reactions")
-        expect(actual["comments"]).to eq("comments")
-        expect(actual["comment"]).to eq("comment")
-      end
-      it "unable to #put update on another family member's post" do
-        other_family_member = FactoryBot.create(:family_member)
-        other_family_post = FactoryBot.create(:post, family_id: other_family_member.family_id, member_id: other_family_member.member_id )
-        unauthorized_update_put_request_params = {
-          "id": @comparable.id,
-          "post": {
-            "id": @comparable.id,
-            "family_id": @comparable.family_id,
-            "member_id": @comparable.member_id,
-            "body": @comparable.body,
-            "location": @comparable.location,
-            "edit": @comparable.edit,
-            "attachment": @comparable.attachment,
-            "locked": @comparable.locked,
-            "updated_at": @comparable.updated_at
-          }
-        }
-        put "/v1/posts/#{other_family_post.id}", :params => unauthorized_update_put_request_params, :headers => @auth_headers
-        
-        json = JSON.parse(response.body)
-        actual = json["data"]
-
-        expect(actual["body"]).to_not eq(unauthorized_update_put_request_params.body)
-        expect(actual["location"]).to_not eq(unauthorized_update_put_request_params.location)
-        expect(actual["family_id"]).to_not eq(unauthorized_update_put_request_params.family_id)
-        expect(actual["member_id"]).to_not eq(unauthorized_update_put_request_params.member_id)
-        expect(actual["attachment"]).to_not eq(unauthorized_update_put_request_params.attachment)
-        expect(actual["edit"]).to_not eq(unauthorized_update_put_request_params.edit)
-        expect(actual["created_at"]).to_not eq(unauthorized_update_put_request_params.created_at)
-        expect(actual["updated_at"]).to_not eq(unauthorized_update_put_request_params.updated_at)
-        expect(response).to have_http_status(403)
-      end
-      it "unable to #patch update on another family member's post" do
-        other_family_member = FactoryBot.create(:family_member)
-        other_family_post = FactoryBot.create(:post, family_id: other_family_member.family_id, member_id: other_family_member.member_id )
-        unauthorized_patch_of_post_params = {
-          "id": @other_family_post.id,
-          "post": {
-            "body": "foobar"
-          }
-        }
-        patch "/v1/posts/#{other_family_post.id}", :params => unauthorized_patch_of_post_params, :headers => @auth_headers
-        
-        json = JSON.parse(response.body)
-        actual = json["data"]
-
-        expect(actual["id"]).to eq(other_family_post.id)
-        expect(actual["body"]).to_not eq(other_family_post.body)
-        expect(response).to have_http_status(403)
-      end
-      it "unable to #patch update on a protected field" do
-        update_patch = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
-        update_patch_request_unpermitted_params = {
-          "id": @comparable.id,
-          "post": {
-            "id": update_put.id,
-            "family_id": update_put.family_id,
-            "member_id": update_patch.member_id,
-            "edit": update_patch.edit,
-            "locked": update_patch.locked,
-            "created_at": update_patch.created_at
-          }
-        }
-        patch "/v1/posts/#{@comparable.id}", :params => update_patch_request_unpermitted_params, :headers => @auth_headers
-        
-        json = JSON.parse(response.body)
-        actual = json["data"]
-
-        
-        expect(actual["id"]).to eq(@comparable.id)
-        expect(actual["locked"]).to eq(@comparable.locked)
-        expect(actual["family_id"]).to eq(@comparable.family_id)
-        expect(actual["member_id"]).to eq(@comparable.member_id)
-        expect(actual["created_at"]).to eq(@comparable.created_at)
-        expect(response).to have_http_status(403)
-      end
-      it "unable to #put update on a protected field" do
-        update_patch = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
-        update_put_request_unpermitted_params = {
-          "id": update_patch.id,
-          "post": {
-            "id": update_patch.id,
-            "family_id": update_patch.family_id,
-            "member_id": update_patch.member_id,
-            "edit": update_put.edit,
-            "locked": update_put.locked,
-            "created_at": update_patch.created_at
-          }
-        }
-
-        put "/v1/posts/#{@comparable.id}", :params => update_put_request_unpermitted_params, :headers => @auth_headers
-
-        json = JSON.parse(response.body)
-        actual = json["data"]
-
-        expect(actual["id"]).to eq(@comparable.id)
-        expect(actual["locked"]).to eq(@comparable.locked)
-        expect(actual["family_id"]).to eq(@comparable.family_id)
-        expect(actual["member_id"]).to eq(@comparable.member_id)
-        expect(actual["created_at"]).to eq(@comparable.created_at)
-        expect(response).to have_http_status(403)
+        actual = json["data"]["relationships"]
+        expect(actual).to include("reactions")
+        expect(actual).to include("comments")
+        expect(actual).to include("member")
       end
     end
-    context "GET /posts Posts#destroy" do
+    context "DELETE /posts/:id Posts#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
       it "can sucessfully delete a post" do
-        @comparable = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member )
+        @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: @member.id )
         @delete_request_params = {:id => @comparable.id }
+
         delete "/v1/posts/#{@comparable.id}", :params => @delete_request_params, :headers => @auth_headers
-        json = JSON.parse(response.body) 
-        expect(json).to eq({})
-        expect(response).to have_http_status(200)
+        expect(response).to have_http_status(204)
       end
       it 'returns 404 for missing content' do
+        @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: @member.id )
         Post.find(@comparable.id).destroy
         delete "/v1/posts/#{@comparable.id}", :params => @delete_request_params, :headers => @auth_headers
         json = JSON.parse(response.body) 
         expect(json).to eq({})
         expect(response).to have_http_status(404)
       end
-      it "unable to delete on another family member's post" do
-        @comparable = FactoryBot.build(:post, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id )
-        delete "/v1/posts/#{@comparable.id}", :params => @delete_request_params, :headers => @auth_headers
-        expect(response).to have_http_status(403)
+    end
+    context "Unauthorize Inside Family ::" do
+      before do
+        @member = FactoryBot.create(:family_member, family_id: @family.id, authorized_at: DateTime.now).member
+        @second_member = FactoryBot.create(:family_member, family_id: @family.id, authorized_at: DateTime.now).member
+        login_auth(@member)
+      end
+      context "GET /posts Posts#update :: Member 2 => Member 1 ::" do
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+          @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @second_member.id )
+          @updates = FactoryBot.build(:post, id: @comparable.id, family_id: @family.id, member_id: @member.id, locked: true )
+        end
+        it "unable to #put update on another family member's post" do
+          unauthorized_update_put_request_params = {
+            "id": @updates[:id],
+            "post": {
+              "id": @updates[:id],
+              "attributes": {
+                "family_id": @updates[:family_id],
+                "member_id": @updates[:member_id],
+                "body": @updates[:body],
+                "location": @updates[:location],
+                "edit": @updates[:edit],
+                "attachment": @updates[:attachment],
+                "locked": @updates[:locked],
+                "updated_at": @updates[:updated_at]
+              }
+            }
+          }
+
+          put "/v1/posts/#{@comparable.id}", :params => unauthorized_update_put_request_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "unable to #patch update on another family member's post" do
+          unauthorized_patch_of_post_params = {
+            "id": @updates[:id],
+            "post": {
+              "body": @updates[:body]
+            }
+          }
+
+          patch "/v1/posts/#{@comparable.id}", :params => unauthorized_patch_of_post_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "unable to #patch update on a protected field" do
+          update_patch_request_unpermitted_params = {
+            "id": @updates[:id],
+            "post": {
+              "id": @updates[:id],
+              "family_id": @updates[:family_id],
+              "member_id": @updates[:member_id],
+              "edit": @updates[:edit],
+              "locked": @updates[:locked],
+              "created_at": @updates[:created_at]
+            }
+          }
+          patch "/v1/posts/#{@comparable.id}", :params => update_patch_request_unpermitted_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "unable to #put update on a protected field" do
+          update_put_request_unpermitted_params = {
+            "id": @updates[:id],
+            "post": {
+              "id": @updates[:id],
+              "family_id": @updates[:family_id],
+              "member_id": @updates[:member_id],
+              "edit": @updates[:edit],
+              "locked": @updates[:locked],
+              "created_at": @updates[:created_at]
+            }
+          }
+          put "/v1/posts/#{@comparable.id}", :params => update_put_request_unpermitted_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+      end
+      context "DELETE /posts Posts#delete :: Member 2 => Member 1" do
+      before(:each) do
+        @auth_headers = @member.create_new_auth_token
+      end
+        it "unable to delete on another family member's post" do
+          @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id )
+          delete_request_params = {:id => @comparable.id }
+          delete "/v1/posts/#{@comparable.id}", :params => delete_request_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
     end
   end # Members / Same Family Describe
@@ -507,7 +477,7 @@ RSpec.describe "Post API", type: :request do
       it "200 and returns 0 posts" do
         get '/v1/posts', :headers => @auth_headers
         json = JSON.parse(response.body) 
-        expected = @compareable.first
+        expected = @comparable.first
         actual = json["data"].first
         expect(actual["id"]).to eq(expected.id)
         expect(json.count).to eq(0)
