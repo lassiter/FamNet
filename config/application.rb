@@ -33,5 +33,8 @@ module FamNet
     config.api_only = true
 
     config.autoload_paths += %W(#{config.root}/lib)
+    config.after_initialize do
+      Rails.application.routes.default_url_options[:host] = ENV['HOST'] || 'example.com:3000'
+    end
   end
 end
