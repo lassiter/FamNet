@@ -1,18 +1,4 @@
 class PostPolicy < ApplicationPolicy
-  # class Scope < Scope
-
-  #   def resolve
-  #     family_id = current_user.families.pluck(:id)
-  #     scope.where(family_id: family_id)
-  #   end
-  # end
-
-  # def update?
-  #   current_user.id == member.id || !record.locked? || (is_moderator?(self.family_id, current_user) || is_admin?(self.family_id, current_user))
-  # end
-  # def destroy?
-  # end
-
 
   attr_reader :current_user, :record
 

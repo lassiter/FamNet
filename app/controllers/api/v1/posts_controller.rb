@@ -6,7 +6,9 @@ class API::V1::PostsController < ApplicationController
   end
   def show
     @post = policy_scope(Post).find(params[:id])
-    render json: @post, serializer: PostSerializer, adapter: :json_api
+    render json: @post, 
+      include: ['comments', 'reactions', 'member'],
+      serializer: PostSerializer, adapter: :json_api
   end
 
   def create
@@ -21,9 +23,9 @@ class API::V1::PostsController < ApplicationController
   def update
     begin
       @post = policy_scope(Post).find(params[:id])
-      # binding.pry
       authorize @post
-      @post.assign_attributes(post_params)
+      binding.pry
+      @post.assign_attributes(update_params)
       if @post.save
         render json: @post
       else
@@ -53,6 +55,9 @@ class API::V1::PostsController < ApplicationController
 
   private
     def post_params
-      params.require(:post).permit(:attributes => [:body, { :location => [] }, :attachment, :locked, :family_id, :member_id])
+      params.require(:post).permit(:id, :attributes => [:body, { :location => [] }, :attachment, :locked, :family_id, :member_id])
+    end
+    def update_params
+      params.require(:post).permit(:id, :attributes => [:body, { :location => [] }, :attachment, :locked])
     end
 end

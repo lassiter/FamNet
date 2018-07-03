@@ -53,11 +53,9 @@ class ApplicationPolicy
   end
 
   def is_admin?(family_id, member)
-    return true if member.family_members.where(user_role: "admin").pluck(:family_id).include?(family_id)
-    return false
+    member.family_members.where(user_role: "admin").pluck(:family_id).include?(family_id)
   end
   def is_moderator?(family_id, member)
-    return true if member.family_members.where(user_role: "moderator").pluck(:family_id).include?(family_id)
-    return false
+    member.family_members.where(user_role: "moderator").pluck(:family_id).include?(family_id)
   end
 end

@@ -1,11 +1,10 @@
 class CommentSerializer < ActiveModel::Serializer
   include Rails.application.routes.url_helpers
 
-  type 'comments'
+  type 'comment'
 
   attributes :id, :body, :edit, :commentable_type, :commentable_id, :member_id, :attachment, :created_at, :updated_at
   attribute :links do
-      binding.pry
     id = object.id
     member_id = object.member
     {
@@ -15,8 +14,8 @@ class CommentSerializer < ActiveModel::Serializer
     }
   end
   has_one :commentable
-  has_one :member
-  # has_many :comment_replies, serializer: CommentReplySerializer
+  has_one :member, serializer: MemberPreviewSerializer
+  has_many :comment_replies, serializer: CommentReplySerializer
   has_many :reactions, serializer: ReactionPreviewSerializer
 
 end
