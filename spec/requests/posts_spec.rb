@@ -80,9 +80,8 @@ RSpec.describe "Post API", type: :request do
         expect(actual["family-id"]).to eq(@comparable.family_id)
         expect(actual["member-id"]).to eq(@comparable.member_id)
 
-        actual["location"].each_with_index do |v, i|
-          expect(actual["location"][i]).to be_within(0.000000000009).of(@comparable.location[i])
-        end
+        expect(actual["location"][0]).to be_within(0.000000000009).of(@comparable.location[0])
+        expect(actual["location"][1]).to be_within(0.000000000009).of(@comparable.location[1])
       end
       it 'and it shows the requested post\'s Comments' do
         get "/v1/posts/#{@comparable.id}", :headers => @auth_headers
@@ -103,7 +102,7 @@ RSpec.describe "Post API", type: :request do
         actual = json["data"]["relationships"]["reactions"]["data"]
         expected = @comparable.reactions
         expect(actual.count).to eq(expected.count)
-        # binding.pry
+        
         actual_reaction = actual.first
         expected_reaction = expected.last
 
@@ -113,7 +112,7 @@ RSpec.describe "Post API", type: :request do
       it 'shows the relationships and links to them in the json package' do
         get "/v1/posts/#{@comparable.id}", :headers => @auth_headers
         json = JSON.parse(response.body)
-        # binding.pry
+        
         actual_post_links = json["data"]["links"]
         actual_member_links = json["data"]["relationships"]["member"]["links"]
         actual_reaction_links = json["data"]["relationships"]["reactions"]["links"]
@@ -184,7 +183,8 @@ RSpec.describe "Post API", type: :request do
 
         expect(response).to have_http_status(200)
         expect(actual["body"]).to eq(@comparable.body)
-        expect(actual["location"]).to eq(@comparable.location)
+        expect(actual["location"][0]).to be_within(0.000000000009).of(@comparable.location[0])
+        expect(actual["location"][1]).to be_within(0.000000000009).of(@comparable.location[1])
         expect(actual["family-id"]).to eq(@comparable.family_id)
         expect(actual["member-id"]).to eq(@comparable.member_id)
       end
@@ -448,26 +448,25 @@ RSpec.describe "Post API", type: :request do
         expect(actual["member-id"]).to_not eq(expected[:member_id])
         expect(actual["attachment"]).to eq(expected[:attachment])
         expect(actual["edit"]).to eq(expected[:edit])
-        expect(actual["created-at"].to_datetime).to_not eq(expected[:created_at])
-        expect(actual["updated-at"].to_datetime).to_not eq(expected[:updated_at])
+        expect(actual["created-at"]).to_not eq(expected[:created_at])
+        expect(actual["updated-at"]).to_not eq(expected[:updated_at])
       end
       it "able to #patch update on another family member's post" do
         patch "/v1/posts/#{@comparable.id}", :params => @update_patch_request_params, :headers => @auth_headers
-        expected = @update_put_request_params[:post][:attributes]
+        expected = @update_patch_request_params[:post][:attributes]
         
         json = JSON.parse(response.body)
         actual = json["data"]["attributes"]
-        
         expect(response).to have_http_status(200)
         expect(actual["body"]).to eq(expected[:body]) # updated
-        expect(actual["location"]).to eq(@comparable.location)
+        expect(actual["location"][0]).to be_within(0.000000000009).of(@comparable.location[0])
+        expect(actual["location"][1]).to be_within(0.000000000009).of(@comparable.location[1])
         expect(actual["family-id"]).to eq(@comparable.family_id) # actual vs expected tested in Unauthorized to Family
-        binding.pry
-        expect(actual["member-id"]).to_not eq(@comparable.member_id)
+        expect(actual["member-id"]).to eq(@comparable.member_id)
         expect(actual["attachment"]).to eq(@comparable.attachment)
         expect(actual["edit"]).to eq(@comparable.edit)
-        expect(actual["created-at"].to_datetime).to_not eq(@comparable.created_at)
-        expect(actual["updated-at"].to_datetime).to_not eq(@comparable.updated_at)
+        expect(actual["created-at"]).to_not eq(@comparable.created_at)
+        expect(actual["updated-at"]).to_not eq(@comparable.updated_at)
       end
     end
     context "GET /posts Posts#destroy" do
@@ -486,19 +485,20 @@ RSpec.describe "Post API", type: :request do
   
   describe ':: Members / Unauthorized to Family ::' do
     before do
-      @family = FactoryBot.create(:family)
-      family_member = FactoryBot.create(:family_member, family_id: @family.id)
-      @member = family_member.member
+      authorized_member = FactoryBot.create(:family_member, authorized_at: DateTime.now)
+      @authorized_member_family_id = authorized_member.family_id
+      @authorized_member = authorized_member.member
 
-      unauthorized_member = FactoryBot.create(:family_member)
-      @unauthorized_member = unauthorized_member.member
+
+      unauthorized_member = FactoryBot.create(:family_member, authorized_at: DateTime.now)
       @unauthorized_member_family_id = unauthorized_member.family_id
-      login_auth(@unauthorized_member)
+      @member = unauthorized_member.member
+      login_auth(@member)
     end
     context "GET /posts Posts#index" do
       before do
-        FactoryBot.create_list(:post_with_children, 5, family_id: @family.id)
-        @comparable = Post.where(family_id: @family.id) # todo: replace with pundit
+        FactoryBot.create_list(:post_with_children, 5, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
+        @comparable = Post.where(family_id: @authorized_member_family_id) # todo: replace with pundit
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -506,36 +506,30 @@ RSpec.describe "Post API", type: :request do
       it "200 and returns 0 posts" do
         get '/v1/posts', :headers => @auth_headers
         json = JSON.parse(response.body) 
-        expected = @comparable.first
-        actual = json["data"].first
-        expect(actual["id"]).to eq(expected.id)
-        expect(json.count).to eq(0)
+        expected = @comparable
+        actual = json["data"]
+        expect(actual.count).to_not eq(expected.count)
+        expect(actual.count).to eq(0)
         expect(response).to have_http_status(200)
       end
-      it 'shows the relationships and links to them in the json package' do
+      it '200 and returns 1 post in it\'s own family but can\'t see scoped posts' do
+        expected = FactoryBot.create(:post, family_id: @unauthorized_member_family_id, member_id: @member.id)
         get '/v1/posts', :headers => @auth_headers
         json = JSON.parse(response.body)
-        actual = json["relationships"]
-        expect(actual["reactions"]).to eq("reactions")
-        expect(actual["comments"]).to eq("comments")
-      end
-      it 'shows links to relevant resources' do
-        get '/v1/posts', :headers => @auth_headers
-        
-        json = JSON.parse(response.body)
-        actual = json["relationships"]
-        expected = {"reactions" => Rails.application.routes.url_helpers.api_v1_reactions_path, "comments" => Rails.application.routes.url_helpers.api_v1_post_comments_path(":post_id"), "comment" => Rails.application.routes.url_helpers.api_v1_post_comment_path(":post_id", ":comment_id")}
-        expect(actual["reactions"]).to eq("reactions")
-        expect(actual["comments"]).to eq("comments")
-        expect(actual["comment"]).to eq("comment")
+        actual = json["data"]
+        scoped_post_all = Post.where(family_id: [@unauthorized_member_family_id, @authorized_member_family_id])
+        expect(actual.count).to eq(1)
+        expect(actual.first["attributes"]["body"]).to eq(expected.body)
+        expect(scoped_post_all.count).to eq(6)
       end
     end
     context "GET /posts Posts#show" do
       before do
-        @comparable = FactoryBot.create(:post_with_children, family_id: @family.id) # todo: replace with pundit
+        @comparable = FactoryBot.create(:post_with_children, family_id: @authorized_member_family_id, member_id: @authorized_member.id) # todo: replace with pundit
+        FactoryBot.create(:post_with_children, family_id: @unauthorized_member_family_id, member_id: @member.id)
       end
       before(:each) do
-        @auth_headers = @unauthorized_member.create_new_auth_token
+        @auth_headers = @member.create_new_auth_token
       end
       it "returns 403 status code on unauthorized access" do
         get "/v1/posts/#{@comparable.id}", :headers => @auth_headers
@@ -544,110 +538,168 @@ RSpec.describe "Post API", type: :request do
     end
     context "GET /posts Posts#create" do
       before do
-        @comparable = FactoryBot.build(:post, family_id: @family.id) # todo: replace with pundit
+        @comparable = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @member.id) # todo: replace with pundit
+        @create_request_params = {
+          "post": {
+            "attributes": {
+              "body": @comparable.body,
+              "location": @comparable.location,
+              "family_id": @comparable.family_id,
+              "member_id": @comparable.member_id
+            }
+          }
+        }
       end
       before(:each) do
-        @auth_headers = @unauthorized_member.create_new_auth_token
+        @auth_headers = @member.create_new_auth_token
       end
-      it "works! (now write some real specs)" do
-        post "/v1/posts", :params => @comparable, :headers => @auth_headers
+      it "unable to create a post in another family" do
+        post "/v1/posts", :params => @create_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
       end
     end
     context "GET /posts Posts#update" do
-      it "#put works! (now write some real specs)" do
-        get '/v1/posts'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+      before(:each) do
+        @auth_headers = @member.create_new_auth_token
+      end
+      before do
+        @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: @member.id )
+        update_put = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
+        update_patch = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
+        @update_put_request_params = {
+          "id": @comparable.id,
+          "post": {
+            "id": @comparable.id,
+            "attributes": {
+              "family_id": @comparable.family_id,
+              "member_id": @comparable.member_id,
+              "body": update_put.body,
+              "location": update_put.location,
+              "edit": update_put.edit,
+              "attachment": update_put.attachment,
+              "locked": update_put.locked,
+              "created_at": update_put.created_at,
+              "updated_at": update_put.updated_at
+            }
+          }
+        }
+        @update_patch_request_params = {
+          "id": @comparable.id,
+          "post": {
+            "id": @comparable.id,
+            "attributes": {
+              "body": update_patch.body
+            }
+          }
+        }
+      end
+      it "returns 403 error for an unauthorized update put" do
+        put "/v1/posts/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
       end
-      it 'and it returns the json for the putted post' do
-        get '/v1/posts'
-        expect(response).to have_http_status(403)
-      end
-      it "#patch can replace a single attribute" do
-        get '/v1/posts'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it 'and it returns the json for the patched post' do
-        get '/v1/posts'
-        expect(response).to have_http_status(403)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/posts'
+      it 'returns 403 error for an unauthorized update patch' do
+        patch "/v1/posts/#{@comparable.id}", :params => @update_patch_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
       end
     end
     context "GET /posts Posts#destroy" do
-      it "works! (now write some real specs)" do
-        get '/v1/posts'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+      before(:each) do
+        @auth_headers = @member.create_new_auth_token
       end
-      it 'can sucessfully delete a post' do
-        expect(response).to have_http_status(403)
-      end
-      it 'returns 404 for missing content' do
+      it "returns 403 error for an unauthorized attempt to delete" do
+        @comparable = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
+        @delete_request_params = {:id => @comparable.id }
+
+        delete "/v1/posts/#{@comparable.id}", :params => @delete_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
       end
     end
   end # Members / Unauthorized to Family Describe
   describe ':: Unknown User ::' do
     before do
+      authorized_member = FactoryBot.create(:family_member, authorized_at: DateTime.now)
+      @authorized_member_family_id = authorized_member.family_id
+      @authorized_member = authorized_member.member
+
       @member = nil
+      FactoryBot.create_list(:post_with_children, 2, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
+      @comparable = Post.where(family_id: @authorized_member_family_id) # todo: replace with pundit
     end
     context "GET /posts Posts#index" do
-      before do
-        FactoryBot.create_list(:post_with_children, 2, family_id: @family.id)
-        @comparable = Post.where(family_id: @family.id) # todo: replace with pundit
-      end
       it "returns a 401 error saying they are not authenticated" do
-        get "/v1/posts", :params => @comparable
+        get "/v1/posts"
         expect(response).to have_http_status(401)
       end
     end
     context "GET /posts Posts#show" do
-      before do
-        @comparable = FactoryBot.create(:post_with_children, 1, family_id: @family.id)
-      end
       it "returns a 401 error saying they are not authenticated" do
-        get "/v1/posts/#{@comparable.id}"
+        get "/v1/posts/#{@comparable.first.id}"
         expect(response).to have_http_status(401)
       end
     end
     context "GET /posts Posts#create" do
-      before do
-        @comparable = FactoryBot.build(:post, family_id: @family.id)
-      end
       it "returns a 401 error saying they are not authenticated" do
-        post "/v1/posts", :params => @comparable
+        comparable_for_create = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
+        @create_request_params = {
+          "post": {
+            "attributes": {
+              "body": comparable_for_create.body,
+              "location": comparable_for_create.location,
+              "family_id": comparable_for_create.family_id,
+              "member_id": comparable_for_create.member_id
+            }
+          }
+        }
+        post "/v1/posts", :params => @comparable_for_create
         expect(response).to have_http_status(401)
       end
     end
     context "GET /posts Posts#update" do
       before do
-        @comparable = FactoryBot.build(:post, family_id: @family.id)
+        @comparable = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
+        update_put = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
+        update_patch = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
+        @update_put_request_params = {
+          "id": @comparable.id,
+          "post": {
+            "id": @comparable.id,
+            "attributes": {
+              "family_id": @comparable.family_id,
+              "member_id": @comparable.member_id,
+              "body": update_put.body,
+              "location": update_put.location,
+              "edit": update_put.edit,
+              "attachment": update_put.attachment,
+              "locked": update_put.locked,
+              "created_at": update_put.created_at,
+              "updated_at": update_put.updated_at
+            }
+          }
+        }
+        @update_patch_request_params = {
+          "id": @comparable.id,
+          "post": {
+            "id": @comparable.id,
+            "attributes": {
+              "body": update_patch.body
+            }
+          }
+        }
       end
       it "#put returns a 401 error saying they are not authenticated" do
-        put "/v1/posts/#{@comparable.id}", :params => @comparable
+        put "/v1/posts/#{@comparable.id}", :params => @update_put_request_params
         expect(response).to have_http_status(401)
       end
       it "#patch returns a 401 error saying they are not authenticated" do
-        patch "/v1/posts/#{@comparable.id}", :params => @comparable
+        patch "/v1/posts/#{@comparable.id}", :params => @update_patch_request_params
         expect(response).to have_http_status(401)
       end
     end
     context "GET /posts Posts#destroy" do
-      before do
-        @comparable = FactoryBot.create(:post, family_id: @family.id)
-      end
       it "returns a 401 error saying they are not authenticated" do
-        delete "/v1/posts/#{@comparable.id}", :params => @comparable
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+        @comparable = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
+        @delete_request_params = {:id => @comparable.id }
+        delete "/v1/posts/#{@comparable.id}", :params => @delete_request_params
         expect(response).to have_http_status(401)
       end
     end

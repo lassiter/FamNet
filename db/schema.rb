@@ -84,7 +84,7 @@ ActiveRecord::Schema.define(version: 2018_06_29_012224) do
     t.datetime "event_start", null: false
     t.datetime "event_end"
     t.boolean "event_allday", default: false
-    t.integer "location", array: true
+    t.float "location", array: true
     t.boolean "potluck", default: false
     t.boolean "locked", default: false
     t.bigint "family_id"

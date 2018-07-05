@@ -9,7 +9,7 @@ class CreateEvents < ActiveRecord::Migration[5.2]
       t.datetime :event_end
       t.boolean :event_allday, default: false
 
-      t.float :location, array: true
+      t.float :location, array: true, precision: 15, scale: 10
 
       t.boolean :potluck, default: false
 

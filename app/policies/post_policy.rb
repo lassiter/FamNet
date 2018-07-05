@@ -10,8 +10,13 @@ class PostPolicy < ApplicationPolicy
   def index?
     @current_user
   end
+
+  def show?
+    current_user.family_members.pluck(:family_id).include?(@record.family_id)
+  end
+
   def create?
-    @current_user
+    current_user.family_members.pluck(:family_id).include?(@record.family_id)
   end
 
   def update?

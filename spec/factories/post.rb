@@ -11,7 +11,7 @@ require 'pry'
     family_id { @family = FactoryBot.create(:family).id }
     member_id { FactoryBot.create(:family_member, family_id: @family).member_id }
 
-    factory :post_with_children do
+    factory :post_with_children do      
       after :create do |post|
         @family_id = post.family_id
         rand(1..9).times do 
