@@ -25,6 +25,12 @@ Rails.application.routes.draw do
           end
         end
       end
+      resources :comments do
+        resources :reactions, only: [:index]
+        resources :comment_replys do
+          resources :reactions, only: [:index]
+        end
+      end
       resource :recipes do
         collection do
           get 'search'
