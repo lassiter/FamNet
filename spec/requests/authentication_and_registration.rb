@@ -6,13 +6,45 @@ RSpec.describe "Authentication API", type: :request do
   let(:valid_member) { create(:member) }
 
   context 'Signing up' do
-    @family_id = FactoryBot.create(:family).id
     context 'with a valid registration' do
-      new_member = {:family => {family_id: @family_id}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
-      it 'sucessfully creates an account' do
+      it 'sucessfully creates an family and account with authorization_enabled set to true by default' do
+        new_member = {:family => {family_name: "Test"}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
         post '/v1/auth', params: new_member
-        response.body
+        json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
+        family_id = Family.find_by(family_name: "Test").id
+        member_id = json["data"]["id"]
+        expect(Member.exists?(id: json["data"]["id"])).to eq(true)
+        expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
+        expect(FamilyConfig.exists?(family_id: family_id)).to eq(true)
+        expect(FamilyConfig.find_by(family_id: family_id).authorization_enabled).to eq(true)
+      end
+      it 'sucessfully creates an family and account with authorization_enabled set to false' do
+        new_member = {:family => {family_name: "Test", config: {:authorization_enabled => false}}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
+        post '/v1/auth', params: new_member
+        json = JSON.parse(response.body)
+        expect(response).to have_http_status(200)
+        family_id = Family.find_by(family_name: "Test").id
+        member_id = json["data"]["id"]
+        expect(Member.exists?(id: json["data"]["id"])).to eq(true)
+        expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
+        expect(FamilyMember.find_by(member_id: json["data"]["id"]).authorized_at).to_not eq(nil)
+        expect(FamilyConfig.exists?(family_id: family_id)).to eq(true)
+                binding.pry
+        expect(FamilyConfig.find_by(family_id: family_id).authorization_enabled).to eq(false)
+      end
+      it 'sucessfully creates an account with an existing family' do
+        family_id = FactoryBot.create(:family).id
+        FamilyConfig.find_or_create_by(family_id: family_id)
+        FactoryBot.create(:family_member, family_id: new_family.id, user_role: "owner", authorized_at: DateTime.now)
+        new_member = {:family => {family_id: family_id}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
+        binding.pry
+        post '/v1/auth', params: new_member
+        json = JSON.parse(response.body)
+        expect(response).to have_http_status(200)
+        expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
+        expect(FamilyMember.find_by(member_id: json["data"]["id"]).user_role).to eq("user")
+
       end
     end
     context 'with a invalid registration' do
