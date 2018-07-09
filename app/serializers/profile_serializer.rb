@@ -4,7 +4,7 @@ class ProfileSerializer < ActiveModel::Serializer
 
   def attributes(*args) # Processes each attribute allowing for easier management of attribute hashes.
     hash = super
-
+    binding.pry
     # User Data for Account Management
     unless object.id == current_user.id || current_user.family_members.exists?(user_role: "admin", family_id: object.family_ids)
       hash.merge(:provider => object[:provider])
@@ -12,9 +12,6 @@ class ProfileSerializer < ActiveModel::Serializer
       hash.merge(:allow_password_change => object[:allow_password_change])
     end
     hash
-  end
-  def include_recipes
-    binding.pry
   end
 
   link(:self) { api_v1_member_path(id: object.id) }
