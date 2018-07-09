@@ -2,18 +2,26 @@ class API::V1::RegistrationsController < DeviseTokenAuth::RegistrationsControlle
   require "pry"
 
   def create
-    super
-    if params["family"]["family_name"].present? 
-      if params["family"]["config"].present?
-        create_new_family(params["family"]["family_name"], params["family"]["config"])
-      else
-        create_new_family(params["family"]["family_name"])  
+    @newMember = build_member(sign_up_params)
+    @newMember.save
+    @token = params[:invite_token]
+    if @token != nil
+      family =  Invite.find_by_token(@token).user_group #find the family attached to the invite
+      @newMember.families.push(family) #add this user to the new family as a member
+    else
+      super
+      if params["family"]["family_name"].present? 
+        if params["family"]["config"].present?
+          create_new_family(params["family"]["family_name"], params["family"]["config"])
+        else
+          create_new_family(params["family"]["family_name"])  
+        end
       end
+      binding.pry
+      create_new_family_member(params["family"]["family_id"]) if params["family"]["family_id"].present?
+      family_id = @resource.family_members.first.family_id
+      authorization_processor(family_id, @resource)
     end
-    binding.pry
-    create_new_family_member(params["family"]["family_id"]) if params["family"]["family_id"].present?
-    family_id = @resource.family_members.first.family_id
-    authorization_processor(family_id, @resource)
   end
 
 private
