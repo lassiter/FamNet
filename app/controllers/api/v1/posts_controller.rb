@@ -67,26 +67,23 @@ class API::V1::PostsController < ApplicationController
 
   def destroy
     begin
-      @post = policy_scope(Post).find(params[:id])
-      authorize @post
+      @post = policy_scope(Post).find_by(id: params[:id]) # raises nil if not found
+      unless @post == nil
+        authorize @post
+      else
+         # Workaround for how Pundit scopes policies to allow unauthorized non-family users to have a helpful error message.
+        if Post.exists?(id: params[:id])
+          @post = Post.find(params[:id])
+          raise Pundit::NotAuthorizedError
+        else
+        raise ActiveRecord::RecordNotFound
+        end
+      end
       @post.destroy
       render :json => {}, status: :no_content
     rescue ActiveRecord::RecordNotFound
-      # Workaround for how Pundit scopes policies.
-      begin
-        # "Post API :: Members / Unauthorized to Family :: GET /posts Posts#destroy returns 403 error for an unauthorized attempt to delete"
-        unless current_user.family_members.where.not(authorized_at: nil).pluck(:family_id).include?(Post.find(params[:id]).family_id)
-          @post = Post.find(params[:id]) if @post == nil
-          @post.errors.add(:id, :forbidden, message: "current user is not authorized to delete this post in family id: #{@post.family_id}")
-          render :json => { errors: @post.errors.full_messages }, :status => :forbidden
-        else
-          render :json => {}, :status => :not_found
-        end
-      rescue ActiveRecord::RecordNotFound # "Post API :: Members / Same Family :: DELETE /posts/:id Posts#destroy returns 404 for missing content"
-        render :json => {}, :status => :not_found
-      end
-    rescue Pundit::NotAuthorizedError # "Post API :: Members / Same Family :: Unauthorize Inside Family :: DELETE /posts Posts#delete :: Member 2 => Member 1 unable to delete on another family member's post"
-      @post = Post.find(params[:id]) if @post == nil
+      render :json => {}, :status => :not_found
+    rescue Pundit::NotAuthorizedError
       @post.errors.add(:id, :forbidden, message: "current user is not authorized to delete this post in family id: #{@post.family_id}")
       render :json => { errors: @post.errors.full_messages }, :status => :forbidden
     end

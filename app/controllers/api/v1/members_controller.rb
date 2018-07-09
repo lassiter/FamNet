@@ -1,34 +1,73 @@
 class API::V1::MembersController < ApplicationController
+  before_action :authenticate_api_v1_member!
+  def index # alias Directory
+    @members = policy_scope(Member) || []
+    render json: @members, each_serializer: DirectoryMemberSerializer, adapter: :json_api
+  end
   def show
-    @member = Member.find(params[:id])
-    render json: PublicShowMemberSerializer.new(@member)
+    begin
+      @member = Member.find(params[:id])
+      authorize @member
+
+      include_sanitizer(options = params[:include]) if params.include?(:include)
+      unless params.include?(:include)
+        render json: ActiveModelSerializers::SerializableResource.new(@member, each_serializer: ProfileSerializer, scope: current_user, scope_name: :current_user, adapter: :json_api)
+      else
+        # options.merge(params[:include])
+        render json: @member, each_serializer: ProfileSerializer, include: ['recipes'], scope: current_user, scope_name: :current_user, adapter: :json_api
+      end
+    rescue Pundit::NotAuthorizedError
+      @member.errors.add(:id, :forbidden, message: "current user is not authorized to view member id: #{params[:id]}")
+      render :json => { errors: @member.errors.full_messages }, :status => :forbidden
+    rescue ActiveRecord::RecordNotFound
+      render :json => {}, :status => :not_found
+    end
   end
   def update
-    @member = Member.find(params[:id])
-    @member.assign_attributes(member_params)
-
-    if @member.save
-      render json: PublicShowMemberSerializer.new(@member)
-    else
-      render json: { errors: @member.errors.full_messages }, status: :unprocessable_entity
+    begin
+      @member = Member.find(params[:id])
+      authorize @member
+      @member.assign_attributes(member_params)
+      if @member.save
+        render json: ActiveModelSerializers::SerializableResource.new(@member, each_serializer: ProfileSerializer, scope: current_user, scope_name: :current_user, adapter: :json_api)
+      else
+        render json: { errors: @member.errors.full_messages }, status: :unprocessable_entity
+      end
+    rescue Pundit::NotAuthorizedError
+      @member.errors.add(:id, :forbidden, message: "current user is not authorized to update member id: #{params[:id]}")
+      render :json => { errors: @member.errors.full_messages }, :status => :forbidden
+    rescue ActiveRecord::RecordNotFound
+      render :json => {}, :status => :not_found
     end
   end
 
   def create
-    @member = Member.new(create_member_params)
-    if @member.save
-      FamilyMember.create(member_id: @member.id, family_id: params[:family][:family_id])
-      render json: @member
-    else
-      render json: { errors: @member.errors.full_messages }, status: :unprocessable_entity
+    begin
+      @member = Member.new(create_member_params)
+      authorize @member
+      if @member.save
+        FamilyMember.create(member_id: @member.id, family_id: params[:family][:family_id])
+        render json: ActiveModelSerializers::SerializableResource.new(@member, each_serializer: ProfileSerializer, scope: current_user, scope_name: :current_user, adapter: :json_api)
+      else
+        render json: { errors: @member.errors.full_messages }, status: :unprocessable_entity
+      end
+    rescue ActionController::ParameterMissing
+      @member = Member.new if @member == nil
+      @member.errors.add(:id, :bad_request, message: "Please register via POST '/v1/auth/'.") unless current_user != nil || current_user.family_members.where('user_role >= ?', 2).exists?
+      @member.errors.add(:id, :bad_request, message: "Family_name or family_id is missing from the request.") if !params.keys.include?("family")
+      render json: { errors: @member.errors.full_messages }, status: :bad_request
     end
   end
 
   def destroy
     begin
-      @member = Member.find(params[:member][:id])
+      @member = Member.find(member_params[:id])
+      authorize @member
       @member.destroy
       render json: {}, status: :no_content
+    rescue Pundit::NotAuthorizedError
+      @member.errors.add(:id, :forbidden, message: "current user is not authorized to delete member id: #{params[:id]}")
+      render :json => { errors: @member.errors.full_messages }, :status => :forbidden
     rescue ActiveRecord::RecordNotFound
       render :json => {}, :status => :not_found
     end
@@ -39,6 +78,14 @@ class API::V1::MembersController < ApplicationController
     params.require(:member).permit(:user_role, :email, :password, :name, :surname)
   end
   def member_params
-    params.require(:member).permit(:id, :image, :image_store, :name, :surname, :nickname, :gender, :bio, :birthday, :instagram, :email, :addresses, :contacts)
+    params.require(:member).permit(:id, :attributes =>[:image, :image_store, :name, :surname, :nickname, :gender, :bio, :birthday, :instagram, :email, :addresses => [:type, "line-1", "line-2", :city, :state, :postal], :contacts => [:home, :work, :cell] ])
+  end
+  def include_sanitizer(includes)
+    result = []
+    includes.each do |assoc = assoc.to_s|
+      permitted = [:families, :event_rsvps, :recipes]
+      result << assoc if permitted.include?(assoc.to_sym)
+    end
+    @options = result
   end
 end

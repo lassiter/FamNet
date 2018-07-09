@@ -22,4 +22,6 @@ class Member < ActiveRecord::Base
   validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i, message: "invalid email format" }, length: { minimum: 1 }
   validates :bio, allow_blank: true, length: { maximum: 500 }
   validates :gender, allow_blank: true, inclusion: { in: genders.keys }
+
+  # accepts_nested_attributes_for :addresses
 end

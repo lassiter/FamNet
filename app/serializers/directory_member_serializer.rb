@@ -1,10 +1,20 @@
 class DirectoryMemberSerializer < ActiveModel::Serializer
-  attributes :id, :name, :surname, :image
+  include Rails.application.routes.url_helpers
 
-  def name
-    object.name
+  type "member"
+
+  attributes :id, :full_name, :nickname, :image, :image_store
+
+  attribute :full_name do
+    [object.name, object.surname].join(" ")
   end
-  def surname
-    object.surname
+
+  link(:self) { api_v1_member_path(id: object.id) }
+
+  has_many :families, through: :family_members, serializer: FamilySerializer do
+    object.families.each do |family|
+      link(:related) { api_v1_family_path(id: family.id) }
+    end
   end
 end
+# puts JSON.pretty_generate(DirectoryMemberSerializer.new(m).serializable_hash)

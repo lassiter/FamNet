@@ -1,7 +1,6 @@
 class API::V1::EventFactoryController < ApplicationController
   
   def initalize(event_params)
-    binding.pry
     @event_params = event_params
     @title = @event_params.title
     @description = @event_params.description
@@ -14,7 +13,6 @@ class API::V1::EventFactoryController < ApplicationController
   end
 
   def result
-    binding.pry
     Event.new({
       title: @title, # string
       description: @description, # text
