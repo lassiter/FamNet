@@ -6,8 +6,9 @@ RSpec.describe "Authentication API", type: :request do
   let(:valid_member) { create(:member) }
 
   context 'Signing up' do
+    @family_id = FactoryBot.create(:family).id
     context 'with a valid registration' do
-      new_member = {"email" => "newmember@example.com", "password" => "password"}
+      new_member = {:family => {family_id: @family_id}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
       it 'sucessfully creates an account' do
         post '/v1/auth', params: new_member
         response.body
@@ -16,7 +17,7 @@ RSpec.describe "Authentication API", type: :request do
     end
     context 'with a invalid registration' do
       context 'with missing information' do
-        new_member = {"email" => "newmember@example.com"}
+        new_member = {:family => {family_id: @family_id}, :registration => {"email" => "newmember@example.com", "password" => "password"}}
         it 'reports an error with a message' do
           post '/v1/auth', params: new_member
 
@@ -25,15 +26,11 @@ RSpec.describe "Authentication API", type: :request do
         end
       end
       context 'non-unique information' do
-        before do
-          Member.create(email:"newmember@example.com",password:"password")
-          Member.first
-        end
         it 'reports non-unique email' do
-          new_member = {"email" => "newmember@example.com", "password" => "password"}
+          FactoryBot.create(:member, email: "newmember@example.com")
+          new_member = {:family => {family_id: @family_id}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
 
           post '/v1/auth', params: new_member
-          response.body
           expect(JSON.parse(response.body)).to include("errors")
           expect(response).to have_http_status(422)
         end

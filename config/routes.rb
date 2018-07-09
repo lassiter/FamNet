@@ -9,8 +9,9 @@ Rails.application.routes.draw do
         :token_validations => 'devise_token_auth/token_validations'
       }
       resources :reaction, only: [:create, :destroy]
-      resource :member
-      resource :family 
+      resources :members, :except => [:create]
+      get 'directory', action: :index, controller: 'members'
+      resources :family 
       resources :reactions, only: [:create, :destroy]
       resources :events_rsvps, only: [:create, :destroy]
       get 'families', action: :index, controller: 'families'
