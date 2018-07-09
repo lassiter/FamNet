@@ -180,11 +180,9 @@ RSpec.describe "Member API", type: :request do
         xit 'and it shows the included Recipes' do
           FactoryBot.create_list(:recipe, 5, member_id: @member.id)
           # currently having trouble getting optional includes
-          binding.pry
           @include_params = {:include => ["recipes"]}
           get "/v1/members/#{@comparable.id}", :params => @include_params, :headers => @auth_headers
           json = JSON.parse(response.body)
-          binding.pry
           actual = json["data"]["relationships"]["recipes"]["data"]
           expected = @comparable.event_rsvps
           expect(actual.count).to eq(expected.count)

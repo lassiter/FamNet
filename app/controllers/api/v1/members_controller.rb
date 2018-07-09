@@ -13,7 +13,6 @@ class API::V1::MembersController < ApplicationController
       unless params.include?(:include)
         render json: ActiveModelSerializers::SerializableResource.new(@member, each_serializer: ProfileSerializer, scope: current_user, scope_name: :current_user, adapter: :json_api)
       else
-              binding.pry
         # options.merge(params[:include])
         render json: @member, each_serializer: ProfileSerializer, include: ['recipes'], scope: current_user, scope_name: :current_user, adapter: :json_api
       end

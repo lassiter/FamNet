@@ -30,7 +30,6 @@ class API::V1::EventsController < ApplicationController
   end
 
   def create
-    binding.pry
     @event = API::V1::EventFactoryController.new(event_params).result
 
     if @event.save
