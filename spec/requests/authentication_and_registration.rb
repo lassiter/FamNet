@@ -6,9 +6,12 @@ RSpec.describe "Authentication API", type: :request do
   let(:valid_member) { create(:member) }
 
   context 'Signing up' do
+<<<<<<< HEAD
     # before(:all) do
     #   Rails.cache.clear
     # end
+=======
+>>>>>>> e352faff9977980e0871613fc427e68f94339c0c
     context 'with a valid registration' do
       it 'sucessfully creates an family and account with authorization_enabled set to true by default' do
         new_member = {:family => {family_name: "Test"}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
@@ -20,7 +23,10 @@ RSpec.describe "Authentication API", type: :request do
         expect(Member.exists?(id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
         expect(FamilyConfig.exists?(family_id: family_id)).to eq(true)
+<<<<<<< HEAD
         binding.pry
+=======
+>>>>>>> e352faff9977980e0871613fc427e68f94339c0c
         expect(FamilyConfig.find_by(family_id: family_id).authorization_enabled).to eq(true)
       end
       it 'sucessfully creates an family and account with authorization_enabled set to false' do
