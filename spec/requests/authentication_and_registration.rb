@@ -20,7 +20,6 @@ RSpec.describe "Authentication API", type: :request do
         expect(Member.exists?(id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
         expect(FamilyConfig.exists?(family_id: family_id)).to eq(true)
-        binding.pry
         expect(FamilyConfig.find_by(family_id: family_id).authorization_enabled).to eq(true)
       end
       it 'sucessfully creates an family and account with authorization_enabled set to false' do
@@ -29,12 +28,13 @@ RSpec.describe "Authentication API", type: :request do
         json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
         family_id = Family.find_by(family_name: "Test").id
+        puts "Test family_id #{family_id}"
         member_id = json["data"]["id"]
         expect(Member.exists?(id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.find_by(member_id: json["data"]["id"]).authorized_at).to_not eq(nil)
+        binding.pry
         expect(FamilyConfig.exists?(family_id: family_id)).to eq(true)
-                binding.pry
         expect(FamilyConfig.find_by(family_id: family_id).authorization_enabled).to eq(false)
       end
       it 'sucessfully creates an account with an existing family' do
