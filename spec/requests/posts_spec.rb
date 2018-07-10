@@ -144,8 +144,7 @@ RSpec.describe "Post API", type: :request do
           expect(actual).to include("type")
           expect(actual).to include("attributes")
           if expect(actual).to include("attributes")
-            
-              expect(actual["attributes"]).to include("links") unless actual["type"] == "reaction"
+            expect(actual["attributes"]).to include("links") unless actual["type"] == "reaction"
           end
         end
 

@@ -13,10 +13,12 @@ Rails.application.routes.draw do
       get 'directory', action: :index, controller: 'members'
       resources :family 
       resources :reactions, only: [:create, :destroy]
-      resources :events_rsvps, only: [:create, :destroy]
       get 'families', action: :index, controller: 'families'
       # get 'family_dashboard', to: 'families#show'
-      resources :events
+      resources :events_rsvps, only: [:index, :show]
+      resources :events do
+        resources :events_rsvps
+      end
       resources :posts do
         resources :reactions, only: [:index]
         resources :comments do
