@@ -105,7 +105,7 @@ ActiveRecord::Schema.define(version: 2018_06_29_012224) do
 
   create_table "family_configs", force: :cascade do |t|
     t.bigint "family_id", null: false
-    t.boolean "authorization_enabled", default: true
+    t.boolean "authorization_enabled", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_family_configs_on_family_id"

@@ -6,43 +6,42 @@ RSpec.describe "Authentication API", type: :request do
   let(:valid_member) { create(:member) }
 
   context 'Signing up' do
-    # before(:all) do
-    #   Rails.cache.clear
-    # end
     context 'with a valid registration' do
-      it 'sucessfully creates an family and account with authorization_enabled set to true by default' do
+      before(:all) do
+        Rails.cache.clear
+      end
+      it 'successfully creates an family and account with authorization_enabled set to true by default' do
         new_member = {:family => {family_name: "Test"}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
         post '/v1/auth', params: new_member
         json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
         family_id = Family.find_by(family_name: "Test").id
         member_id = json["data"]["id"]
+        family_config = FamilyConfig.find_by(family_id: family_id)
         expect(Member.exists?(id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
         expect(FamilyConfig.exists?(family_id: family_id)).to eq(true)
         expect(FamilyConfig.find_by(family_id: family_id).authorization_enabled).to eq(true)
       end
-      it 'sucessfully creates an family and account with authorization_enabled set to false' do
+      it 'successfully creates an family and account with authorization_enabled set to false' do
         new_member = {:family => {family_name: "Test", config: {:authorization_enabled => false}}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
         post '/v1/auth', params: new_member
         json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
         family_id = Family.find_by(family_name: "Test").id
-        puts "Test family_id #{family_id}"
         member_id = json["data"]["id"]
         expect(Member.exists?(id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.find_by(member_id: json["data"]["id"]).authorized_at).to_not eq(nil)
-        binding.pry
+        # binding.pry
         expect(FamilyConfig.exists?(family_id: family_id)).to eq(true)
         expect(FamilyConfig.find_by(family_id: family_id).authorization_enabled).to eq(false)
       end
-      it 'sucessfully creates an account with an existing family' do
+      it 'successfully creates an account with an existing family' do
         family_id = FactoryBot.create(:family).id
         FamilyConfig.find_or_create_by(family_id: family_id)
-        FactoryBot.create(:family_member, family_id: new_family.id, user_role: "owner", authorized_at: DateTime.now)
+        FactoryBot.create(:family_member, family_id: family_id, user_role: "owner", authorized_at: DateTime.now)
         new_member = {:family => {family_id: family_id}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
-        binding.pry
         post '/v1/auth', params: new_member
         json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
@@ -73,13 +72,13 @@ RSpec.describe "Authentication API", type: :request do
       end
     end
   end
-  context 'Anon Access' do
-    it 'accesses unprotected' do
-    end
-    it 'fails to access protected resources' do
+  # context 'Anon Access' do
+  #   it 'accesses unprotected' do
+  #   end
+  #   it 'fails to access protected resources' do
       
-    end
-  end
+  #   end
+  # end
   context 'Sign in' do
     before do
       post '/v1/auth/sign_in', { params: { "email" => valid_member.email, "password" => valid_member.password } }
