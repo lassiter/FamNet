@@ -7,19 +7,23 @@ RSpec.describe "Authentication API", type: :request do
 
   context 'Signing up' do
     context 'with a valid registration' do
-      it 'sucessfully creates an family and account with authorization_enabled set to true by default' do
+      before(:all) do
+        Rails.cache.clear
+      end
+      it 'successfully creates an family and account with authorization_enabled set to true by default' do
         new_member = {:family => {family_name: "Test"}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
         post '/v1/auth', params: new_member
         json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
         family_id = Family.find_by(family_name: "Test").id
         member_id = json["data"]["id"]
+        family_config = FamilyConfig.find_by(family_id: family_id)
         expect(Member.exists?(id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
         expect(FamilyConfig.exists?(family_id: family_id)).to eq(true)
         expect(FamilyConfig.find_by(family_id: family_id).authorization_enabled).to eq(true)
       end
-      it 'sucessfully creates an family and account with authorization_enabled set to false' do
+      it 'successfully creates an family and account with authorization_enabled set to false' do
         new_member = {:family => {family_name: "Test", config: {:authorization_enabled => false}}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
         post '/v1/auth', params: new_member
         json = JSON.parse(response.body)
@@ -29,22 +33,20 @@ RSpec.describe "Authentication API", type: :request do
         expect(Member.exists?(id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.find_by(member_id: json["data"]["id"]).authorized_at).to_not eq(nil)
+        # binding.pry
         expect(FamilyConfig.exists?(family_id: family_id)).to eq(true)
-                binding.pry
         expect(FamilyConfig.find_by(family_id: family_id).authorization_enabled).to eq(false)
       end
-      it 'sucessfully creates an account with an existing family' do
+      it 'successfully creates an account with an existing family' do
         family_id = FactoryBot.create(:family).id
         FamilyConfig.find_or_create_by(family_id: family_id)
-        FactoryBot.create(:family_member, family_id: new_family.id, user_role: "owner", authorized_at: DateTime.now)
+        FactoryBot.create(:family_member, family_id: family_id, user_role: "owner", authorized_at: DateTime.now)
         new_member = {:family => {family_id: family_id}, :registration => {"email" => "newmember@example.com", "password" => "password", "name" => "name", "surname" => "surname"}}
-        binding.pry
         post '/v1/auth', params: new_member
         json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
         expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
         expect(FamilyMember.find_by(member_id: json["data"]["id"]).user_role).to eq("user")
-
       end
     end
     context 'with a invalid registration' do
@@ -68,14 +70,47 @@ RSpec.describe "Authentication API", type: :request do
         end
       end
     end
-  end
-  context 'Anon Access' do
-    it 'accesses unprotected' do
+    context ':: via email token && registration ::' do
+      before do
+        family_id = FactoryBot.create(:family).id
+        FamilyConfig.find_or_create_by(family_id: family_id)
+        @family_member = FactoryBot.create(:family_member, family_id: family_id, user_role: "owner", authorized_at: DateTime.now)
+      end
+      it 'sucessfully creates a new member account with an existing family' do
+        invite = FactoryBot.create(:invite, family_id: @family_member.family_id, sender_id: @family_member.member_id)
+        new_member = {:invite_token => invite.token, :registration => {"email" => invite.email, "password" => "password", "name" => "name", "surname" => "surname"}}
+        post '/v1/auth', params: new_member
+        json = JSON.parse(response.body)
+        expect(response).to have_http_status(200)
+        expect(FamilyMember.exists?(member_id: json["data"]["id"])).to eq(true)
+        created_member = FamilyMember.find_by(member_id: json["data"]["id"])
+        expect(invite.family.family_member_ids).to include(created_member.id)
+        expect(created_member.user_role).to eq("user")
+        expect(Invite.exists?(recipient_id: created_member.member_id)).to eq(true)
+        # invite = Invite.find(invite.id)
+        # expect(invite.accepted).to eq(true) # need to migrate
+      end
+      it 'sucessfully creates an family_member bond between an exisiting member account with an existing family' do
+        existing_member = FactoryBot.create(:family_member, user_role: "user", authorized_at: DateTime.now).member
+        invite = FactoryBot.create(:invite, family_id: @family_member.family_id, sender_id: @family_member.member_id, recipient_id: existing_member.id)
+        # re-registration doesn't occur.
+        expect(FamilyMember.exists?(family_id: @family_member.family_id, member_id: existing_member.id)).to eq(true)
+        created_member = FamilyMember.find_by(family_id: @family_member.family_id, member_id: existing_member.id)
+        expect(invite.family.family_member_ids).to include(created_member.id)
+        expect(created_member.user_role).to eq("user")
+        expect(Invite.exists?(recipient_id: created_member.member_id)).to eq(true)
+        # invite = Invite.find(invite.id)
+        # expect(invite.accepted).to eq(true) # need to migrate
+      end
     end
-    it 'fails to access protected resources' do
+  end
+  # context 'Anon Access' do
+  #   it 'accesses unprotected' do
+  #   end
+  #   it 'fails to access protected resources' do
       
-    end
-  end
+  #   end
+  # end
   context 'Sign in' do
     before do
       post '/v1/auth/sign_in', { params: { "email" => valid_member.email, "password" => valid_member.password } }

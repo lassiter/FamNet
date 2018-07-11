@@ -2,59 +2,67 @@ class API::V1::RegistrationsController < DeviseTokenAuth::RegistrationsControlle
   require "pry"
 
   def create
-    @newMember = build_member(sign_up_params)
-    @newMember.save
-    @token = params[:invite_token]
-    if @token != nil
-      family =  Invite.find_by_token(@token).user_group #find the family attached to the invite
-      @newMember.families.push(family) #add this user to the new family as a member
-    else
-      super
-      if params["family"]["family_name"].present? 
-        if params["family"]["config"].present?
-          create_new_family(params["family"]["family_name"], params["family"]["config"])
+    super do |resource|
+      begin
+        if @invite_params.present? && @invite_params[:invite_token] != nil
+          @token = @invite_params[:invite_token]
+          invite = Invite.find_by_token(@token)
+          invite.update_attributes(recipient_id: resource.id) # update the recipient_id
+          create_new_family_member(invite.family_id) # create new family member based on @token.family
+        elsif @family_params.present? && @family_params[:family_name].present?
+          if @family_params[:config].present?
+            create_new_family(family_name: @family_params[:family_name], config: @family_params[:config])
+          else
+            create_new_family(family_name: @family_params[:family_name]) 
+          end
+        elsif @family_params.present? && @family_params[:family_id].present? && !@invite_params.present?
+          create_new_family_member(@family_params[:family_id])
         else
-          create_new_family(params["family"]["family_name"])  
+          # whoops something went wrong
         end
+        @family_id = resource.family_members.first.family_id
+      rescue
+
+      ensure
+        # if sucessful_registration?(@family_id, @resource)
+          authorization_processor(@family_id, @resource)
+          # # Void Invite token once sucessfully registered.
+          # Invite.find_by_token(@token).update_attributes(accepted: true, token: nil) if @token.present? && @family_id != nil
+        # end
       end
-      binding.pry
-      create_new_family_member(params["family"]["family_id"]) if params["family"]["family_id"].present?
-      family_id = @resource.family_members.first.family_id
-      authorization_processor(family_id, @resource)
     end
-  end
+  end # create
 
 private
+
+  # def sucessful_registration?(@family_id, @resource)
+  #   raise some_failed_registration_rescue unless FamilyMember.exists?(family_id: @family_id, member_id: @resource.id)
+  # end
 
   def create_new_family_member(family_id)
     new_family_member = FamilyMember.find_or_create_by(family_id: family_id, member_id: @resource.id)
   end
 
-  def create_new_family(family_name, *config)
+  def create_new_family(family_name:, config: nil)
     new_family = Family.find_or_create_by(family_name: family_name)
-    new_family_config = API::V1::FamilyConfig.find_or_create_by(family_id: new_family.id)
+    new_family_config = FamilyConfig.find_or_create_by(family_id: new_family.id)
     new_family_member = FamilyMember.find_or_create_by(family_id: new_family.id, member_id: @resource.id).update_attributes(user_role: "owner")
-    if config.present?
-      config = config.first.permit!.to_h if config.first.include?("authorization_enabled")
-      @config_record = FamilyConfig.find_by(family_id: new_family.id)
-      config.each do | key , value |
-        @config_record.update_attributes(authorization_enabled: value) if key.to_s == "authorization_enabled" && value.to_s == "false" # default is true
-        puts "authorization_enabled: #{@config_record.authorization_enabled}, expecting false"
-      end
+    unless config.nil?
+      FamilyConfig.find_by(family_id: new_family.id).update(config)
     end
   end
+  
   def authorization_processor(family_id, resource)
       # if authorization_enabled is false, auto-authorize family_member
-      @config_record = FamilyConfig.find_by(family_id: family_id) if @config_record == nil
-      if @config_record.authorization_enabled == false
-        puts "authorization_enabled: #{@config_record.authorization_enabled}, expecting false"
+      if FamilyConfig.find_by(family_id: family_id).authorization_enabled == false
         record = FamilyMember.find_by(family_id: family_id, member_id: resource.id)
         record.update_attributes(authorized_at: DateTime.now)
-        puts "record_id: #{record.id} | authorized_at: #{record.authorized_at}, expecting not nil"
       end
   end
   def sign_up_params
-    params.require(:family).permit(:family_name, :family_id, :config => [:authorization_enabled])
+    @invite_params = params.permit(:invite_token)
+    # Not required if @invite_params is registering a new user via an invitation.
+    @family_params = params.require(:family).permit(:family_name, :family_id, :config => [:authorization_enabled]) unless @invite_params.present?
     params.require(:registration).permit(:email, :password, :password_confirmation, :name, :surname, :confirm_success_url, :confirm_error_url)
   end
 

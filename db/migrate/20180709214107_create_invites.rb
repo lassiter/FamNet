@@ -4,8 +4,8 @@ class CreateInvites < ActiveRecord::Migration[5.2]
       t.string :email 
       t.references :family
       t.integer :sender_id
-      t.integer :recipient_id
-      t.string :token
+      t.integer :recipient_id, null: true, default: nil
+      t.string :token, index: true
       t.timestamps
     end
   end
