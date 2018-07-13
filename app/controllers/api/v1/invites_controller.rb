@@ -1,34 +1,33 @@
 class API::V1::InvitesController < ApplicationController
-
-  def new
-   @token = params[:invite_token] #<-- pulls the value from the url query string
-  end
+  before_action :authenticate_api_v1_member!
 
   def create
-    @invite = Invite.new(invite_params)
-    @invite.sender_id = current_user.id
-    if @invite.save
+    # binding.pry
+    begin
+      @invite = Invite.new(invite_params)
+      authorize @invite
+      @invite.sender_id = current_user.id
+      if @invite.save
 
-      #if the user already exists
-      if @invite.recipient != nil 
-
-        #send a notification email
-        InviteMailer.existing_user_invite(@invite).deliver 
-
-        #Add the user to the user group
-        @invite.recipient.families.push(@invite.family)
-        recipient = FamilyMember.new(family_id: @invite.family.id, member_id: @invite.recipient.id)
-        recipient.save!
+        #if the user already exists
+        if @invite.recipient != nil 
+          InviteMailer.existing_user_invite(@invite).deliver
+          render json: @invite, each_serializer: InviteSerializer, adapter: :json_api
+        else
+          InviteMailer.new_user_invite(@invite, new_api_v1_member_registration_url(:invite_token => @invite.token)).deliver
+          render json: @invite, each_serializer: InviteSerializer, adapter: :json_api
+        end
       else
-        InviteMailer.new_user_invite(@invite, new_user_registration_path(:invite_token => @invite.token)).deliver
+        render json: { errors: @invite.errors.full_messages }, status: :unprocessable_entity
       end
-    else
-      # oh no, creating an new invitation failed
+    rescue Pundit::NotAuthorizedError
+      @invite.errors.add(:id, :forbidden, message: "current user is not authorized to create this invite")
+      render :json => { errors: @invite.errors.full_messages }, :status => :forbidden
     end
   end
   private
   def invite_params
-    params.require(:invite).permit(:family_id, :sender_id, :recipient_id, :email, :invite_token)
+    params.require(:invite).permit(:family_id, :sender_id, :recipient_id, :email)
   end
 
 end

@@ -2,7 +2,7 @@ Rails.application.routes.draw do
 
   namespace :api, :path => "" do
     namespace :v1 do
-      resources :invites
+      resources :invites, only: [:create]
       mount_devise_token_auth_for 'Member', at: 'auth', controllers: {
         :sessions => 'devise_token_auth/sessions',
         :registrations => 'api/v1/registrations',

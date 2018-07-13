@@ -9,6 +9,8 @@ class Invite < ApplicationRecord
   after_save :create_family_member,
     unless: Proc.new { |invite| invite.recipient_id.nil? }
 
+  validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i, message: "invalid email format" }, length: { minimum: 1 }
+
 
   def check_user_existence
       recipient = Member.find_by_email(email)

@@ -134,9 +134,12 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
     t.integer "sender_id"
     t.integer "recipient_id"
     t.string "token"
+    t.datetime "sent_at"
+    t.datetime "accepted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_invites_on_family_id"
+    t.index ["token"], name: "index_invites_on_token"
   end
 
   create_table "members", force: :cascade do |t|

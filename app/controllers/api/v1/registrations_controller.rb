@@ -27,7 +27,7 @@ class API::V1::RegistrationsController < DeviseTokenAuth::RegistrationsControlle
         # if sucessful_registration?(@family_id, @resource)
           authorization_processor(@family_id, @resource)
           # # Void Invite token once sucessfully registered.
-          # Invite.find_by_token(@token).update_attributes(accepted: true, token: nil) if @token.present? && @family_id != nil
+          # Invite.find_by_token(@token).update_attributes(accepted_at: DateTime.now, token: nil) if @token.present? && @family_id != nil
         # end
       end
     end
