@@ -64,5 +64,13 @@ RSpec.configure do |config|
   # Authentication Helper
   config.include AuthenticationHelper, type: :request
 
+  # Shoulda Matcher Gem for Model Testing
+  Shoulda::Matchers.configure do |config|
+    config.integrate do |with|
+      # Choose a test framework:
+      with.test_framework :rspec
+      with.library :rails
+    end
+  end
 
 end

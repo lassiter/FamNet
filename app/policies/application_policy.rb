@@ -51,7 +51,9 @@ class ApplicationPolicy
       scope
     end
   end
-
+  def is_owner?(family_id, member)
+    member.family_members.exists?(user_role: "owner", family_id: family_id)
+  end
   def is_admin?(family_id, member)
     member.family_members.exists?(user_role: "admin", family_id: family_id)
   end

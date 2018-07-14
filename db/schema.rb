@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_06_29_012224) do
+ActiveRecord::Schema.define(version: 2018_07_09_214107) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -105,7 +105,7 @@ ActiveRecord::Schema.define(version: 2018_06_29_012224) do
 
   create_table "family_configs", force: :cascade do |t|
     t.bigint "family_id", null: false
-    t.boolean "authorization_enabled", default: true
+    t.boolean "authorization_enabled", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_family_configs_on_family_id"
@@ -126,6 +126,20 @@ ActiveRecord::Schema.define(version: 2018_06_29_012224) do
     t.string "title"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "invites", force: :cascade do |t|
+    t.string "email"
+    t.bigint "family_id"
+    t.integer "sender_id"
+    t.integer "recipient_id"
+    t.string "token"
+    t.datetime "sent_at"
+    t.datetime "accepted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_invites_on_family_id"
+    t.index ["token"], name: "index_invites_on_token"
   end
 
   create_table "members", force: :cascade do |t|
