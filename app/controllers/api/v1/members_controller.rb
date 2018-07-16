@@ -73,12 +73,4 @@ class API::V1::MembersController < ApplicationController
   def member_params
     params.require(:member).permit(:id, :attributes =>[:image, :image_store, :name, :surname, :nickname, :gender, :bio, :birthday, :instagram, :email, :addresses => [:type, "line-1", "line-2", :city, :state, :postal], :contacts => [:home, :work, :cell] ])
   end
-  def include_sanitizer(includes)
-    result = []
-    includes.each do |assoc = assoc.to_s|
-      permitted = [:families, :event_rsvps, :recipes]
-      result << assoc if permitted.include?(assoc.to_sym)
-    end
-    @options = result
-  end
 end

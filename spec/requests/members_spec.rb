@@ -102,11 +102,9 @@ RSpec.describe "Member API", type: :request do
       it 'correct serialization for general profile/show format for test record' do
         # This has a authorized rendering as well including important user info.
         get "/v1/members/#{@comparable.id}", :headers => @auth_headers
-
         json = JSON.parse(response.body)
         actual = json["data"]
         expected = @comparable
-        binding.pry
         expect(actual).to include("id")
         expect(actual).to include("type")
 
@@ -129,22 +127,16 @@ RSpec.describe "Member API", type: :request do
         expect(actual).to include("links")
         expect(actual["links"]).to include("self")
         expect(actual["links"]["self"]).to eq(api_v1_member_path(id: actual["id"]))
-        expect(actual).to_not include("relationships")
 
-        # # Relationships
-        # actual_relationships = actual["relationships"]
-        # expect(actual_relationships["families"]).to include("data")
-        # expect(actual_relationships["families"]).to include("links")
+        # Relationships
+        actual_relationships = actual["relationships"]
+        expect(actual_relationships["families"]).to include("data")
+        expect(actual_relationships["families"]).to include("links")
 
-        # # Relationship Data
-        # actual_relationship_data = actual_relationships["families"]["data"].first
-        # expect(actual_relationship_data).to include("id")
-        # expect(actual_relationship_data).to include("type")
-        # # Relationship Links
-        # actual_relationship_links = actual_relationships["families"]["links"].first
-        # expect(actual_relationship_links).to include("related")
-        # expected_family_id = FamilyMember.where(member_id: actual["id"].to_i).pluck(:family_id).uniq.first
-        # expect(actual_relationship_links["related"]).to eq(api_v1_family_path(id: actual["id"]))
+        expect(actual_relationships).to include("event-rsvps")
+        expect(actual_relationships).to include("family-members")
+        expect(actual_relationships).to include("posts")
+        expect(actual_relationships).to include("recipes")
       end
       it 'actual matches expected across test record' do
         # This has a authorized rendering as well including important user info.
