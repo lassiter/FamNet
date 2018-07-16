@@ -2,7 +2,6 @@ class ApplicationPolicy
   attr_reader :current_user, :record
 
   def initialize(current_user, record)
-    # raise Pundit::NotAuthorizedError, "must be logged in" unless current_user
     @current_user   = current_user
     @record = record
   end
@@ -59,5 +58,16 @@ class ApplicationPolicy
   end
   def is_moderator?(family_id, member)
     member.family_members.exists?(user_role: "moderator", family_id: family_id)
+  end
+  def is_authorized_for_family_admin_activity?(family_id, member)
+    if record.user_role == "owner"
+      is_owner?(family_id, member)
+    elsif record.user_role == "admin"
+      is_admin?(family_id, member) || is_owner?(family_id, member)
+    elsif record.user_role == "moderator"
+      is_admin?(family_id, member) || is_owner?(family_id, member)
+    elsif record.user_role == "user"
+      is_admin?(family_id, member) || is_owner?(family_id, member)
+    end
   end
 end
