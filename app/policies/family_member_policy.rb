@@ -20,7 +20,6 @@ class FamilyMemberPolicy < ApplicationPolicy
 
   class Scope < Scope
     def resolve
-      # binding.pry
       scope
     end
   end

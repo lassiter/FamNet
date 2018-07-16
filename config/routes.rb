@@ -40,6 +40,7 @@ Rails.application.routes.draw do
         end
         resources :reactions, only: [:index]
       end
-    end
-  end
+      resources :family_configs, only: [:show, :update]
+    end #v1
+  end #api
 end

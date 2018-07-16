@@ -1,4 +1,6 @@
 class ProfileSerializer < ActiveModel::Serializer
+  include Rails.application.routes.url_helpers
+  
   type "member"
   attributes :id, :name, :nickname, :image, :email, :created_at, :updated_at, :surname, :image_store, :contacts, :addresses, :gender, :bio, :birthday, :instagram
 

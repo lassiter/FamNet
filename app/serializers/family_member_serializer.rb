@@ -1,7 +1,7 @@
 class FamilyMemberSerializer < ActiveModel::Serializer
   include Rails.application.routes.url_helpers
 
-  type "family_member"
+  type "family-member"
   attributes :id, :family_id, :member_id, :authorized_at, :user_role, :updated_at, :created_at
 
   link(:self) { api_v1_family_member_url(object.id) }

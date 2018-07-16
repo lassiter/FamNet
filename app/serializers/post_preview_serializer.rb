@@ -17,6 +17,7 @@ class PostPreviewSerializer < ActiveModel::Serializer
   link(:member) { api_v1_member_path(id: object.member.id) }
 
   has_many :comments, polymorphic: true, serializer: CommentSerializer do
+    # object.each do
     link(:related) { api_v1_post_comments_path(object.id) }
   end
 
