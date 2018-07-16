@@ -106,6 +106,7 @@ RSpec.describe "Member API", type: :request do
         json = JSON.parse(response.body)
         actual = json["data"]
         expected = @comparable
+        binding.pry
         expect(actual).to include("id")
         expect(actual).to include("type")
 

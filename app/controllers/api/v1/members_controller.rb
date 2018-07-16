@@ -8,14 +8,7 @@ class API::V1::MembersController < ApplicationController
     begin
       @member = Member.find(params[:id])
       authorize @member
-
-      include_sanitizer(options = params[:include]) if params.include?(:include)
-      unless params.include?(:include)
-        render json: ActiveModelSerializers::SerializableResource.new(@member, each_serializer: ProfileSerializer, scope: current_user, scope_name: :current_user, adapter: :json_api)
-      else
-        # options.merge(params[:include])
-        render json: @member, each_serializer: ProfileSerializer, include: ['recipes'], scope: current_user, scope_name: :current_user, adapter: :json_api
-      end
+      render json: ActiveModelSerializers::SerializableResource.new(@member, each_serializer: ProfileSerializer, scope: current_user, scope_name: :current_user, adapter: :json_api)
     rescue Pundit::NotAuthorizedError
       @member.errors.add(:id, :forbidden, message: "current user is not authorized to view member id: #{params[:id]}")
       render :json => { errors: @member.errors.full_messages }, :status => :forbidden
