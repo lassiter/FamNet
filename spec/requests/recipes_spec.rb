@@ -4,10 +4,14 @@ RSpec.describe "Recipes", type: :request do
   
   describe ':: Members / Same Family ::' do
     before do
-      family_member = FactoryBot.create(:family_member).member
+      @family = FactoryBot.create(:family)
+      family_member = FactoryBot.create(:family_member, family_id: @family.id)
+      second_family_member = FactoryBot.create(:family_member, family_id: @family.id)
+      @second_member = second_family_member.member
       @member = family_member.member
-      
+      login_auth(@member)
     end
+
     context "GET /recipes Recipes#index" do
       before(:each) do
       @member.create_new_auth_token
@@ -127,32 +131,40 @@ RSpec.describe "Recipes", type: :request do
       end
     end
     context "GET /recipes Recipes#search" do
-      it "works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+    before do
+      @recipe_list = FactoryBot.create_list(:recipe, 5, member_id: @second_member.id)
+    end
+    before(:each) do
+      @member.create_new_auth_token
+    end
+      it "200 request" do
+        query_value = @recipe_list.first.tags_list.first
+        get '/v1/recipes/search', params: {filter: {:type => :tag, :query => query_value}}, headers: @auth_headers
         expect(response).to have_http_status(200)
       end
       it "returns unprocessible entity if type doesn't match" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+        query_value = @recipe_list.first.tags_list.first
+        get '/v1/recipes/search', params: {filter: {:type => :name, :query => query_value}}, headers: @auth_headers
         expect(response).to have_http_status(:unprocessable_entity)
       end
-      it "can return a recipe by tag matches" do
-        get '/v1/recipes'
+      it "can return a recipe by tag match" do
+        query_value = @recipe_list.second.tags_list.first
+        get '/v1/recipes/search', params: {filter: {:type => :tag, :query => query_value}}, headers: @auth_headers
+        json = JSON.parse(response.body)["data"]
+        actual = json
+        binding.pry
+        expect(response).to have_http_status(200)
+      end
+      it "can return a recipe by recipe title match" do
+        query_value = @recipe_list.third.title
+        get '/v1/recipes/search', params: {filter: {:type => :recipe, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body) 
         header = JSON.parse(response.header)
         expect(response).to have_http_status(200)
       end
-      it "can return a recipe by recipe name matches" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it "can return a recipe by ingredient matches" do
-        get '/v1/recipes'
+      it "can return a recipe by ingredient match" do
+        query_value = @recipe_list.fourth.ingredients_list.first
+        get '/v1/recipes/search', params: {filter: {:type => :ingredient, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body) 
         header = JSON.parse(response.header)
         expect(response).to have_http_status(200)
