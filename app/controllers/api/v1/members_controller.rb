@@ -8,14 +8,7 @@ class API::V1::MembersController < ApplicationController
     begin
       @member = Member.find(params[:id])
       authorize @member
-
-      include_sanitizer(options = params[:include]) if params.include?(:include)
-      unless params.include?(:include)
-        render json: ActiveModelSerializers::SerializableResource.new(@member, each_serializer: ProfileSerializer, scope: current_user, scope_name: :current_user, adapter: :json_api)
-      else
-        # options.merge(params[:include])
-        render json: @member, each_serializer: ProfileSerializer, include: ['recipes'], scope: current_user, scope_name: :current_user, adapter: :json_api
-      end
+      render json: ActiveModelSerializers::SerializableResource.new(@member, each_serializer: ProfileSerializer, scope: current_user, scope_name: :current_user, adapter: :json_api)
     rescue Pundit::NotAuthorizedError
       @member.errors.add(:id, :forbidden, message: "current user is not authorized to view member id: #{params[:id]}")
       render :json => { errors: @member.errors.full_messages }, :status => :forbidden
@@ -79,13 +72,5 @@ class API::V1::MembersController < ApplicationController
   end
   def member_params
     params.require(:member).permit(:id, :attributes =>[:image, :image_store, :name, :surname, :nickname, :gender, :bio, :birthday, :instagram, :email, :addresses => [:type, "line-1", "line-2", :city, :state, :postal], :contacts => [:home, :work, :cell] ])
-  end
-  def include_sanitizer(includes)
-    result = []
-    includes.each do |assoc = assoc.to_s|
-      permitted = [:families, :event_rsvps, :recipes]
-      result << assoc if permitted.include?(assoc.to_sym)
-    end
-    @options = result
   end
 end

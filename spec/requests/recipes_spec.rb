@@ -116,7 +116,7 @@ RSpec.describe "Recipes", type: :request do
       it 'can sucessfully delete a post' do
         expect(response).to have_http_status(200)
       end
-      itx 'returns 404 for missing content' do
+      xit 'returns 404 for missing content' do
         expect(response).to have_http_status(404)
       end
       it "unable to delete on another family member's recipe" do
@@ -290,7 +290,7 @@ RSpec.describe "Recipes", type: :request do
       it 'can sucessfully delete a post' do
         expect(response).to have_http_status(403)
       end
-      itx 'returns 404 for missing content' do
+      xit 'returns 404 for missing content' do
         expect(response).to have_http_status(403)
       end
     end

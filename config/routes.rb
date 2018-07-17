@@ -2,6 +2,7 @@ Rails.application.routes.draw do
 
   namespace :api, :path => "" do
     namespace :v1 do
+      resources :family_members, only: [:index, :update, :destroy]
       resources :invites, only: [:create]
       mount_devise_token_auth_for 'Member', at: 'auth', controllers: {
         :sessions => 'devise_token_auth/sessions',
@@ -39,6 +40,7 @@ Rails.application.routes.draw do
         end
         resources :reactions, only: [:index]
       end
-    end
-  end
+      resources :family_configs, only: [:show, :update]
+    end #v1
+  end #api
 end
