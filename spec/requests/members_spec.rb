@@ -63,7 +63,8 @@ RSpec.describe "Member API", type: :request do
         expect(actual).to include("type")
 
         # Attributes
-        expect(actual["attributes"]).to include("full-name")
+        expect(actual["attributes"]).to include("name")
+        expect(actual["attributes"]).to include("surname")
         expect(actual["attributes"]).to include("nickname")
         expect(actual["attributes"]).to include("image")
         expect(actual["attributes"]).to include("image-store")

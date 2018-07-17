@@ -3,11 +3,7 @@ class DirectoryMemberSerializer < ActiveModel::Serializer
 
   type "member"
 
-  attributes :id, :full_name, :nickname, :image, :image_store
-
-  attribute :full_name do
-    [object.name, object.surname].join(" ")
-  end
+  attributes :id, :name, :surname, :nickname, :image, :image_store
 
   link(:self) { api_v1_member_path(id: object.id) }
 
