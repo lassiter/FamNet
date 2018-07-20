@@ -1,25 +1,25 @@
 class API::V1::RecipesController < ApplicationController
   def index
     @recipes = policy_scope(Recipe)
-    render json: @recipes
+    render json: @recipes, each_serializer: RecipeSerializer, adapter: :json_api
   end
   def search
     begin
       query = search_params[:query]
       type = search_params[:type]
-      binding.pry
       # Searching and Processing Query based on Type
       if type == "tag"
         tag_ids = Tag.where("lower(title) LIKE :search OR lower(description) LIKE :search", search: "%#{query.downcase}%").pluck(:id).uniq
-        @recipes = Recipe.where(id: RecipeTag.where(tag_id: tag_ids).pluck(:recipe_id).uniq )
+        @recipes = policy_scope(Recipe).where(id: RecipeTag.where(tag_id: tag_ids).pluck(:recipe_id).uniq )
       elsif type == "ingredient"
         ingredient_ids = Ingredient.where("lower(title) LIKE :search", search: "%#{query.downcase}%").pluck(:id).uniq
-        @recipes = Recipe.where(id: RecipeIngredient.where(ingredient_id: ingredient_ids).pluck(:recipe_id).uniq )
+        @recipes = policy_scope(Recipe).where(id: RecipeIngredient.where(ingredient_id: ingredient_ids).pluck(:recipe_id).uniq )
       elsif type == "recipe"
-        @recipes = Recipe.where()
+        @recipes = policy_scope(Recipe).where("lower(title) LIKE :search OR lower(description) LIKE :search", search: "%#{query.downcase}%").uniq
       else
         # Request didn't match any preset types.
         render json: {:query => query, :type => type, :message => "Request type likely didn't match 'tag', 'ingredient, or 'recipe'."}, status: :bad_request
+        return
       end
       # Formatting for Render
       if @recipes == [] || @recipes.nil?

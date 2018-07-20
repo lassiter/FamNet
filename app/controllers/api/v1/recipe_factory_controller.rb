@@ -24,9 +24,9 @@ class API::V1::RecipeFactoryController < ApplicationController
       @tags_object_array << tag   
     end
 
-    @steps = recipe_params["steps"]                                              # json
+    @steps = recipe_params["steps"] # json
     
-    @member = Member.find(recipe_params["member_id"].to_i)                            # object
+    @member = Member.find(recipe_params["member_id"].to_i) # object
 
   end
   
