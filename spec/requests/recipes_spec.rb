@@ -81,7 +81,6 @@ RSpec.describe "Recipes", type: :request do
         get '/v1/recipes', :headers => @auth_headers
         json = JSON.parse(response.body)["data"]
         actual = json
-        binding.pry
         expected = @recipe_list
         actual_record = json.first["attributes"]
         expected_record = @recipe_list.first
