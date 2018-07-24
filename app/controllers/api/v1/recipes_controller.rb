@@ -1,4 +1,5 @@
 class API::V1::RecipesController < ApplicationController
+  before_action :authenticate_api_v1_member!
   def index
     @recipes = policy_scope(Recipe)
     render json: @recipes, each_serializer: RecipeSerializer, adapter: :json_api
@@ -37,9 +38,10 @@ class API::V1::RecipesController < ApplicationController
   def show
     begin
       @recipe = Recipe.find(params[:id])
+      authorize @recipe
       render json: @recipe, serializer: RecipeSerializer, adapter: :json_api
     rescue Pundit::NotAuthorizedError
-      @recipe.errors.add(:id, :forbidden, message: "current user is not authorized to search this post in family id: #{@recipe.family_id}")
+      @recipe.errors.add(:id, :forbidden, message: "current user is not authorized to view this recipe")
       render :json => { errors: @recipe.errors.full_messages }, :status => :forbidden
     rescue ActiveRecord::RecordNotFound
       render :json => {}, :status => :not_found
@@ -58,7 +60,7 @@ class API::V1::RecipesController < ApplicationController
         render json: { errors: @recipe.errors.full_messages }, status: :unprocessable_entity
       end
     rescue Pundit::NotAuthorizedError
-      @recipe.errors.add(:id, :forbidden, message: "current user is not authorized to search this post in family id: #{@recipe.family_id}")
+      @recipe.errors.add(:id, :forbidden, message: "current user is not authorized to create this recipe")
       render :json => { errors: @recipe.errors.full_messages }, :status => :forbidden
     rescue ActiveRecord::RecordNotFound
       render :json => {}, :status => :not_found
@@ -66,21 +68,32 @@ class API::V1::RecipesController < ApplicationController
   end
 
   def update
-    @recipe = Recipe.find(params[:id])
-    @recipe.assign_attributes(recipe_params)
-
-    if @recipe.save
-      render json: @recipe
-    else
-      render json: { errors: @recipe.errors.full_messages }, status: :unprocessable_entity
+    begin
+      @recipe = Recipe.find(params[:id])
+      authorize @recipe
+      @recipe.assign_attributes(recipe_params)
+      if @recipe.save
+        render json: @recipe
+      else
+        render json: { errors: @recipe.errors.full_messages }, status: :unprocessable_entity
+      end
+    rescue Pundit::NotAuthorizedError
+      @recipe.errors.add(:id, :forbidden, message: "current user is not authorized to update this recipe")
+      render :json => { errors: @recipe.errors.full_messages }, :status => :forbidden
+    rescue ActiveRecord::RecordNotFound
+      render :json => {}, :status => :not_found
     end
   end
 
    def destroy
     begin
       @recipe = Recipe.find(params[:id])
+      authorize @recipe
       @recipe.destroy
       render json: {}, status: :no_content
+    rescue Pundit::NotAuthorizedError
+      @recipe.errors.add(:id, :forbidden, message: "current user is not authorized to delete this recipe")
+      render :json => { errors: @recipe.errors.full_messages }, :status => :forbidden
     rescue ActiveRecord::RecordNotFound
       render :json => {}, :status => :not_found
     end

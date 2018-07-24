@@ -34,7 +34,7 @@ Rails.application.routes.draw do
           resources :reactions, only: [:index]
         end
       end
-      resource :recipes do
+      resources :recipes do
         collection do
           get 'search'
         end

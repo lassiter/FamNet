@@ -11,5 +11,8 @@ class RecipeSerializer < ActiveModel::Serializer
 
   has_many :tags, serializer: TagSerializer
   has_many :ingredients, serializer: IngredientSerializer
+  has_many :reactions, serializer: ReactionPreviewSerializer do
+    link(:related) { api_v1_recipe_reactions_url(object.id) }
+  end
 
 end

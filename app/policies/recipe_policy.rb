@@ -16,19 +16,23 @@ class RecipePolicy < ApplicationPolicy
   end
 
   def show?
-    current_user.family_members.pluck(:family_id).include?(@record.family_id)
+    @current_user
+    does_current_user_and_record_member_id_share_family?(@current_user, @record.member)
   end
 
   def create?
-    current_user.family_members.pluck(:family_id).include?(@record.family_id)
+    auth = FamilyMember.where(member_id: current_user.id).where.not(authorized_at: nil)
+    auth.any? {|item| !item.authorized_at.nil?}
   end
 
   def update?
-    current_user.id == record.member_id || (!record.locked?) && (current_user.id == record.member_id) || (is_moderator?(record.family_id, current_user) || is_admin?(record.family_id, current_user))
+    record_family_id_scope = FamilyMember.where(member_id: record.member_id).pluck(:family_id)
+    current_user.id == record.member_id || (is_moderator?(record_family_id_scope, current_user) || is_admin?(record_family_id_scope, current_user))
   end
 
   def destroy?
-    current_user.id == record.member_id || (is_moderator?(record.family_id, current_user) || is_admin?(record.family_id, current_user))
+    record_family_id_scope = FamilyMember.where(member_id: record.member_id).pluck(:family_id)
+    current_user.id == record.member_id || is_admin?(record_family_id_scope, current_user)
   end
   
 
