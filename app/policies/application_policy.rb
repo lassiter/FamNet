@@ -70,4 +70,10 @@ class ApplicationPolicy
       is_admin?(family_id, member) || is_owner?(family_id, member)
     end
   end
+  def does_current_user_and_record_member_id_share_family?(current_user, record_member)
+    i = 0
+    record_member.family_ids.each { |id| i = i + 1 if current_user.family_ids.include?(id) }
+    false if i === 0
+    true if i >= 1
+  end
 end
