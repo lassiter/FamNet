@@ -31,7 +31,7 @@ class API::V1::ReactionsController < ApplicationController
   private
   
   def load_interactions
-    klass = [Post, Comment, CommentOnComment, Recipe].detect { |i| params["#{i.name.underscore}_id"]}
+    klass = [Post, Comment, CommentReply, Recipe].detect { |i| params["#{i.name.underscore}_id"]}
     @interaction = klass.find(params["#{klass.name.underscore}_id"])
   end
 

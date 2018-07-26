@@ -39,6 +39,12 @@ Rails.application.routes.draw do
           get 'search'
         end
         resources :reactions, only: [:index]
+        resources :comments do
+          resources :reactions, only: [:index]
+          resources :comment_replys do
+            resources :reactions, only: [:index]
+          end
+        end
       end
 
       resources :family_configs, only: [:show, :update]
