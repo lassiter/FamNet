@@ -17,8 +17,13 @@ class CommentPolicy < ApplicationPolicy
   end
 
   def create?
-    auth = FamilyMember.where(member_id: current_user.id).where.not(authorized_at: nil)
-    auth.any? {|item| !item.authorized_at.nil?}
+    parent_record_members_family_ids = FamilyMember.where(member_id: record.commentable.member_id).where.not(authorized_at: nil).pluck(:family_id)
+    auth = FamilyMember.where(family_id: parent_record_members_family_ids, member_id: current_user.id).where.not(authorized_at: nil)
+    unless auth.empty?
+      true
+    else
+      false
+    end
   end
 
   def update?

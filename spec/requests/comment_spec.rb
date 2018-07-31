@@ -481,7 +481,7 @@ RSpec.describe "Comment API", type: :request do
       authorized_member = FactoryBot.create(:family_member, authorized_at: DateTime.now)
       @authorized_member_family_id = authorized_member.family_id
       @authorized_member = authorized_member.member
-
+      @subject = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
 
       unauthorized_member = FactoryBot.create(:family_member, authorized_at: DateTime.now)
       @unauthorized_member_family_id = unauthorized_member.family_id
@@ -538,15 +538,15 @@ RSpec.describe "Comment API", type: :request do
         actual_ids = []
         actual.pluck("id").each {|id| actual_ids << id.to_i}
         comparable_ids = @authorized_comparable.pluck(:id) + @unauthorized_comparable.pluck(:id)
-        expect(actual_ids).to eq(comparable_ids)
+        expect(actual_ids).to eq(comparable_ids.reverse)
         expect(actual.count).to eq(4)
         expect(response).to have_http_status(200)
       end
     end
     context "GET /comments Comments#show" do
       before do
-        @comparable = FactoryBot.create(:post_with_children, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
-        FactoryBot.create(:post_with_children, family_id: @unauthorized_member_family_id, member_id: @member.id)
+        login_auth(@unauthorized_member) # @member = @unauthorized_member 
+        @comparable = FactoryBot.create(:post_with_children, family_id: @authorized_member_family_id, member_id: @authorized_member.id).comments.first
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -558,13 +558,14 @@ RSpec.describe "Comment API", type: :request do
     end
     context "GET /comments Comments#create" do
       before do
-        @comparable = FactoryBot.build(:comment, family_id: @authorized_member_family_id, member_id: @member.id) # todo: replace with pundit
+        login_auth(@unauthorized_member) # @member = @unauthorized_member 
+        @comparable = FactoryBot.build(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @member.id)
         @create_request_params = {
           "comment": {
             "attributes": {
               "body": @comparable.body,
-              "location": @comparable.location,
-              "family_id": @comparable.family_id,
+              "commentable_type": @comparable.commentable_type,
+              "commentable_id": @comparable.commentable_id,
               "member_id": @comparable.member_id
             }
           }
@@ -574,32 +575,25 @@ RSpec.describe "Comment API", type: :request do
         @auth_headers = @member.create_new_auth_token
       end
       it "unable to create a comment in another family" do
-        comment "/v1/comments", :params => @create_request_params, :headers => @auth_headers
+        post "/v1/comments", :params => @create_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
       end
     end
     context "GET /comments Comments#update" do
-      before(:each) do
-        @auth_headers = @member.create_new_auth_token
-      end
       before do
-        @comparable = FactoryBot.create(:comment, family_id: @member_family_id, member_id: @member.id )
-        update_put = FactoryBot.build(:comment, family_id: @member_family_id, member_id: @member.id )
-        update_patch = FactoryBot.build(:comment, family_id: @member_family_id, member_id: @member.id )
+        login_auth(@unauthorized_member) # @member = @unauthorized_member 
+        @comparable = FactoryBot.create(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @authorized_member.id)
+        update = FactoryBot.build(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @member.id )
         @update_put_request_params = {
           "id": @comparable.id,
           "comment": {
             "id": @comparable.id,
             "attributes": {
-              "family_id": @comparable.family_id,
+              "commentable_type": @subject.class.to_s,
+              "commentable_id": @subject.id,
               "member_id": @comparable.member_id,
-              "body": update_put.body,
-              "location": update_put.location,
-              "edit": update_put.edit,
-              "attachment": update_put.attachment,
-              "locked": update_put.locked,
-              "created_at": update_put.created_at,
-              "updated_at": update_put.updated_at
+              "body": update.body,
+              "attachment": update.attachment
             }
           }
         }
@@ -608,10 +602,13 @@ RSpec.describe "Comment API", type: :request do
           "comment": {
             "id": @comparable.id,
             "attributes": {
-              "body": update_patch.body
+              "body": update.body
             }
           }
         }
+      end
+      before(:each) do
+        @auth_headers = @member.create_new_auth_token
       end
       it "returns 403 error for an unauthorized update put" do
         put "/v1/comments/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
@@ -623,76 +620,72 @@ RSpec.describe "Comment API", type: :request do
       end
     end
     context "GET /comments Comments#destroy" do
+      before do
+        login_auth(@unauthorized_member) # @member = @unauthorized_member 
+      end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
       it "returns 403 error for an unauthorized attempt to delete" do
-        @comparable = FactoryBot.create(:comment, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
+        @comparable = FactoryBot.create(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @authorized_member.id)
         @delete_request_params = {:id => @comparable.id }
 
-        delete "/v1/comments/#{@comparable.id}", :params => @delete_request_params, :headers => @auth_headers
+        delete "/v1/comments/#{@comparable.id}", :params => {comment: @delete_request_params}, :headers => @auth_headers
         expect(response).to have_http_status(403)
       end
     end
   end # Members / Unauthorized to Family Describe
   describe ':: Unknown User ::' do
     before do
+      logout_auth(@member)
       authorized_member = FactoryBot.create(:family_member, authorized_at: DateTime.now)
       @authorized_member_family_id = authorized_member.family_id
       @authorized_member = authorized_member.member
-
-      @member = nil
-      FactoryBot.create_list(:post_with_children, 2, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
-      @comparable = Comment.where(family_id: @authorized_member_family_id) # todo: replace with pundit
+      @subject = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
+      @comparable = FactoryBot.create(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @authorized_member.id)
     end
     context "GET /comments Comments#index" do
       it "returns a 401 error saying they are not authenticated" do
-        get "/v1/comments"
+        get "/v1/#{@subject.class.to_s.downcase.pluralize}/#{@subject.id}/comments"
         expect(response).to have_http_status(401)
       end
     end
     context "GET /comments Comments#show" do
       it "returns a 401 error saying they are not authenticated" do
-        get "/v1/comments/#{@comparable.first.id}"
+        get "/v1/comments/#{@comparable.id}"
         expect(response).to have_http_status(401)
       end
     end
     context "GET /comments Comments#create" do
       it "returns a 401 error saying they are not authenticated" do
-        comparable_for_create = FactoryBot.build(:comment, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
+        comparable_for_create = FactoryBot.build(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: nil)
         @create_request_params = {
           "comment": {
             "attributes": {
               "body": comparable_for_create.body,
-              "location": comparable_for_create.location,
-              "family_id": comparable_for_create.family_id,
+              "commentable_type": comparable_for_create.commentable_type,
+              "commentable_id": comparable_for_create.commentable_id,
               "member_id": comparable_for_create.member_id
             }
           }
         }
-        comment "/v1/comments", :params => @comparable_for_create
+        post "/v1/comments", :params => @comparable_for_create
         expect(response).to have_http_status(401)
       end
     end
     context "GET /comments Comments#update" do
       before do
-        @comparable = FactoryBot.create(:comment, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
-        update_put = FactoryBot.build(:comment, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
-        update_patch = FactoryBot.build(:comment, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
+        @comparable = FactoryBot.create(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @authorized_member.id )
+        update = FactoryBot.build(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: nil)
         @update_put_request_params = {
           "id": @comparable.id,
           "comment": {
             "id": @comparable.id,
             "attributes": {
-              "family_id": @comparable.family_id,
-              "member_id": @comparable.member_id,
-              "body": update_put.body,
-              "location": update_put.location,
-              "edit": update_put.edit,
-              "attachment": update_put.attachment,
-              "locked": update_put.locked,
-              "created_at": update_put.created_at,
-              "updated_at": update_put.updated_at
+              "body": update.body,
+              "commentable_type": update.commentable_type,
+              "commentable_id": update.commentable_id,
+              "member_id": update.member_id
             }
           }
         }
@@ -701,7 +694,7 @@ RSpec.describe "Comment API", type: :request do
           "comment": {
             "id": @comparable.id,
             "attributes": {
-              "body": update_patch.body
+              "body": update.body
             }
           }
         }
@@ -717,7 +710,7 @@ RSpec.describe "Comment API", type: :request do
     end
     context "GET /comments Comments#destroy" do
       it "returns a 401 error saying they are not authenticated" do
-        @comparable = FactoryBot.create(:comment, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
+        @comparable = FactoryBot.create(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @authorized_member.id )
         @delete_request_params = {:id => @comparable.id }
         delete "/v1/comments/#{@comparable.id}", :params => @delete_request_params
         expect(response).to have_http_status(401)

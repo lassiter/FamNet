@@ -1,5 +1,5 @@
 class API::V1::CommentsController < ApplicationController
-  # before_action :authenticate_api_v1_member!
+  before_action :authenticate_api_v1_member!
   before_action :load_comments, only: [:index]
   def index
     begin
