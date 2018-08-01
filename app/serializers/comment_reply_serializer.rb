@@ -5,10 +5,10 @@ class CommentReplySerializer < ActiveModel::Serializer
     attribute :links do
     id = object.id
     comment_id = object.comment.id
-    member_id = object.member
+    member_id = object.member.id
     {
       self: api_v1_comment_comment_reply_path(comment_id, id),
-      parent: api_v1_comment_path(comment_id),
+      comment: api_v1_comment_path(comment_id),
       member: api_v1_member_path(member_id)
     }
   end

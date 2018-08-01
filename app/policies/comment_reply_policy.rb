@@ -1,4 +1,4 @@
-class CommentPolicy < ApplicationPolicy
+class CommentReplyPolicy < ApplicationPolicy
   
   attr_reader :current_user, :record
 
@@ -13,11 +13,17 @@ class CommentPolicy < ApplicationPolicy
 
   def show?
     @current_user
-    does_current_user_and_record_member_id_share_family?(@current_user, @record.member)
+    parent_record_members_family_ids = FamilyMember.where(member_id: record.comment.member_id).where.not(authorized_at: nil).pluck(:family_id)
+    auth = FamilyMember.where(family_id: parent_record_members_family_ids, member_id: current_user.id).where.not(authorized_at: nil)
+    unless auth.empty?
+      true
+    else
+      false
+    end
   end
 
   def create?
-    parent_record_members_family_ids = FamilyMember.where(member_id: record.commentable.member_id).where.not(authorized_at: nil).pluck(:family_id)
+    parent_record_members_family_ids = FamilyMember.where(member_id: record.comment.member_id).where.not(authorized_at: nil).pluck(:family_id)
     auth = FamilyMember.where(family_id: parent_record_members_family_ids, member_id: current_user.id).where.not(authorized_at: nil)
     unless auth.empty?
       true
@@ -44,7 +50,7 @@ class CommentPolicy < ApplicationPolicy
         authorized_ids = current_user.family_members.where.not(authorized_at: nil).pluck(:family_id)
         scoped_member_ids_by_family_member_relationship = FamilyMember.where(family_id: authorized_ids).pluck(:member_id)
         unless authorized_ids.empty?
-          records = Comment.where(member_id: scoped_member_ids_by_family_member_relationship)
+          records = CommentReply.where(member_id: scoped_member_ids_by_family_member_relationship)
           records
         else
           records
@@ -52,4 +58,4 @@ class CommentPolicy < ApplicationPolicy
       end
     end # resolve
   end # Scope < Scope
-end # CommentPolicy
+end # CommentReplyPolicy

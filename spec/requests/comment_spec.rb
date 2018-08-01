@@ -265,7 +265,7 @@ RSpec.describe "Comment API", type: :request do
         expect(actual["member"]["data"]["id"].to_i).to eq(@comparable.member_id)
       end
       it '#put shows the relationships and links to them in the json package' do
-        patch "/v1/comments/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
+        put "/v1/comments/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         json = JSON.parse(response.body)
         actual = json["data"]["relationships"]
 
@@ -316,9 +316,9 @@ RSpec.describe "Comment API", type: :request do
         end
         it "unable to #put update on another family member's comment" do
           unauthorized_update_put_request_params = {
-            "id": @updates[:id],
+            "id": @comparable[:id],
             "comment": {
-              "id": @updates[:id],
+              "id": @comparable[:id],
               "attributes": {
               "commentable_type": @subject.class.to_s,
               "commentable_id": @subject.id,
@@ -334,7 +334,7 @@ RSpec.describe "Comment API", type: :request do
         end
         it "unable to #patch update on another family member's comment" do
           unauthorized_patch_of_post_params = {
-            "id": @updates[:id],
+            "id": @comparable[:id],
             "comment": {
               "body": @updates[:body]
             }
@@ -345,9 +345,9 @@ RSpec.describe "Comment API", type: :request do
         end
         it "unable to #patch update on a protected field" do
           update_patch_request_unpermitted_params = {
-            "id": @updates[:id],
+            "id": @comparable[:id],
             "comment": {
-              "id": @updates[:id],
+              "id": @comparable[:id],
               "commentable_type": @update_subject.class.to_s,
               "commentable_id": @update_subject.id,
               "member_id": @updates[:member_id],
@@ -360,9 +360,9 @@ RSpec.describe "Comment API", type: :request do
         end
         it "unable to #put update on a protected field" do
           update_put_request_unpermitted_params = {
-            "id": @updates[:id],
+            "id": @comparable[:id],
             "comment": {
-              "id": @updates[:id],
+              "id": @comparable[:id],
               "commentable_type": @update_subject.class.to_s,
               "commentable_id": @update_subject.id,
               "member_id": @updates[:member_id],
