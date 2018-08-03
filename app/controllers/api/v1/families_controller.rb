@@ -56,6 +56,7 @@ class API::V1::FamiliesController < ApplicationController
           InviteMailer.new_user_invite(invite, new_user_registration_path(:invite_token => @invite.token))
         end
       end
+    end
   end
 
   private
