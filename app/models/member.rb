@@ -4,7 +4,6 @@ class Member < ActiveRecord::Base
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :trackable, :validatable
   include DeviseTokenAuth::Concerns::User
-  include Notifiable
   
   has_many :recipes
   has_many :family_members, dependent: :destroy
@@ -13,6 +12,7 @@ class Member < ActiveRecord::Base
   has_many :event_rsvps
   has_many :posts
   has_many :comments
+  has_many :notifications
 
   has_many :invitations, :class_name => "Invite", :foreign_key => 'recipient_id'
   has_many :sent_invites, :class_name => "Invite", :foreign_key => 'sender_id'
@@ -25,10 +25,5 @@ class Member < ActiveRecord::Base
   validates :email, presence: true, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i, message: "invalid email format" }, length: { minimum: 1 }
   validates :bio, allow_blank: true, length: { maximum: 500 }
   validates :gender, allow_blank: true, inclusion: { in: genders.keys }
-
-  def self.notifications
-    binding.pry
-    Notification.where(member_id: id)
-  end
 
 end

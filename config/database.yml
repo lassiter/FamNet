@@ -82,6 +82,7 @@ test:
 production:
   adapter: postgresql
   encoding: unicode
+  host: <%= ENV["PRODUCTION_DB_HOST"] %>
   database: <%= ENV["PRODUCTION_DB_NAME"] %>
   pool: 5
   username: <%= ENV["PRODUCTION_DB_LOGIN"]%>
