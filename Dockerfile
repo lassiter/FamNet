@@ -7,4 +7,4 @@ WORKDIR /var/www/app
 
 RUN bundle install
 
-CMD rails server -p 3000 -b 0.0.0.0
+CMD bin/start
