@@ -14,9 +14,6 @@ class Member < ActiveRecord::Base
   has_many :posts
   has_many :comments
 
-  # Added manually to avoid after_commit callback
-  has_many :notifications, :as => :notifiable
-
   has_many :invitations, :class_name => "Invite", :foreign_key => 'recipient_id'
   has_many :sent_invites, :class_name => "Invite", :foreign_key => 'sender_id'
 
@@ -31,7 +28,7 @@ class Member < ActiveRecord::Base
 
   def self.notifications
     binding.pry
-    Notification.where(member_id: current_user.id)
+    Notification.where(member_id: id)
   end
 
 end
