@@ -185,7 +185,7 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
     t.bigint "notifiable_id", null: false
     t.bigint "member_id", null: false
     t.boolean "mentioned", default: false
-    t.boolean "viewed"
+    t.boolean "viewed", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["member_id"], name: "index_notifications_on_member_id"

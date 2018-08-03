@@ -23,7 +23,6 @@ class MentionParser
       name = name[0].slice(1..-1).split(" ")
       @members << Member.find_by(name: name.first, surname: name.last)
     end
-
     return @members
 
   end

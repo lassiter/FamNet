@@ -4,6 +4,7 @@ class Member < ActiveRecord::Base
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :trackable, :validatable
   include DeviseTokenAuth::Concerns::User
+  include Notifiable
   
   has_many :recipes
   has_many :family_members, dependent: :destroy
@@ -12,6 +13,9 @@ class Member < ActiveRecord::Base
   has_many :event_rsvps
   has_many :posts
   has_many :comments
+
+  # Added manually to avoid after_commit callback
+  has_many :notifications, :as => :notifiable
 
   has_many :invitations, :class_name => "Invite", :foreign_key => 'recipient_id'
   has_many :sent_invites, :class_name => "Invite", :foreign_key => 'sender_id'
@@ -25,5 +29,9 @@ class Member < ActiveRecord::Base
   validates :bio, allow_blank: true, length: { maximum: 500 }
   validates :gender, allow_blank: true, inclusion: { in: genders.keys }
 
-  # accepts_nested_attributes_for :addresses
+  def self.notifications
+    binding.pry
+    Notification.where(member_id: current_user.id)
+  end
+
 end

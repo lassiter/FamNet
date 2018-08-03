@@ -1,41 +1,39 @@
 class API::V1::NotificationsController < ApplicationController
-
-  def index
-    @notifications = Notification.all.where(member_id: current_user.id)
-  end
-
-  def create
-    @notification = Notification.new(notification_params)
-    if @notification.save
-      render json: @notification
-    else
-      render json: { errors: @notification.errors.full_messages }, status: :unprocessable_entity
-    end
-  end
-
-  def update
-    @notification = Notification.find(id: params[:id])
-    @notification.assign_attributes(notification_params)
-
-    if @notification.save
-      render json: @notification
-    else
-      render json: { errors: @notification.errors.full_messages }, status: :unprocessable_entity
-    end
-  end
-
-  def destroy
+  before_action :authenticate_api_v1_member!
+  def unviewed
     begin
-      @notification = Notification.find(params[:id])
-      @notification.destroy
-      render json: {}, status: :no_content
+      @notifications = policy_scope(Notification).where(member_id: current_user.id).where.not(viewed: true)
+      # authorize @notifications
+      unless @notifications.empty?
+        render json: @notifications, each_serializer: NotificationSerializer, adapter: :json_api
+        @notifications.update_all(viewed: true)
+      else
+        render json: {data: []}, :status => :ok
+      end
+    rescue Pundit::NotAuthorizedError
+      @notifications.errors.add(:id, :forbidden, message: "current user is not authorized to view notifications for that member_id.")
+      render :json => { errors: @notifications.errors.full_messages }, :status => :forbidden
     rescue ActiveRecord::RecordNotFound
       render :json => {}, :status => :not_found
     end
   end
-  private
-  def notification_params
-    params.require(:notification).permit(:id, :notifiable_type, :notifiable_id, :member_id, :mentioned, :viewed)
+  
+  def all
+    begin
+      @notifications = policy_scope(Notification).where(member_id: current_user.id)
+      # authorize @notifications
+      unless @notifications.empty?
+        render json: @notifications, each_serializer: NotificationSerializer, adapter: :json_api
+        @notifications.where(viewed: false).update_all(viewed: true) if @notifications.exists?(viewed: false)
+      else
+        render json: {data: []}, :status => :ok
+      end
+    rescue Pundit::NotAuthorizedError
+      @notifications.errors.add(:id, :forbidden, message: "current user is not authorized to view notifications for that member_id.")
+      render :json => { errors: @notifications.errors.full_messages }, :status => :forbidden
+    rescue ActiveRecord::RecordNotFound
+      render :json => {}, :status => :not_found
+    end
   end
 
 end

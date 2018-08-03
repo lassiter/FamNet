@@ -2,6 +2,8 @@ Rails.application.routes.draw do
 
   namespace :api, :path => "" do
     namespace :v1 do
+      get 'notifications', action: :unviewed, controller: 'notifications'
+      get 'all_notifications', action: :all, controller: 'notifications'
       resources :family_members, only: [:index, :update, :destroy]
       resources :invites, only: [:create]
       mount_devise_token_auth_for 'Member', at: 'auth', controllers: {

@@ -5,448 +5,206 @@ RSpec.describe "Notifications", type: :request do
   
   describe ':: Members / Same Family ::' do
     before do
-      family_member = FactoryBot.create(:family_member).member
-      @member = family_member.member
-      
+      @family = FactoryBot.create(:family)
+      @family_member = FactoryBot.create(:family_member, family_id: @family.id)
+      @member = @family_member.member
+      @commenter_family_member = FactoryBot.create(:family_member, family_id: @family.id)
+      @commenter = @commenter_family_member.member
+      login_auth(@member)
     end
-    context "GET /notifications Notifications#index" do
+    context "GET /v1/notifications Notifications#unviewed" do
       before(:each) do
-      @member.create_new_auth_token
+        @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @member.id)
+        @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
+        @auth_headers = @member.create_new_auth_token
+        notification_member_ids = []
+        @comparable_children.each {|child| notification_member_ids << child.notifications.pluck(:member_id).first}
+        @comparable_notifications = Notification.where(member_id: @comparable_children)
       end
-      
-      it "works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+      it '200 and schema matches' do
+        get "/v1/notifications", :headers => @auth_headers
+        json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
-      end
-      it 'and can get all of the records available to the Member\'s policy via index' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-      it 'and getting the index returns the record\'s #show for each notification' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-    end
-    context "GET /notifications Notifications#show" do
-      it "works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it 'and it shows the notification requested' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-      it 'and it shows the requested notification\'s attached record' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-    end
-    context "GET /notifications Notifications#create" do
-      it "works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it 'and it returns the json for the newly created post' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-    end
-    context "GET /notifications Notifications#update" do
-      it "#put works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it 'and it returns the json for the putted post' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-      it "#patch can replace a single attribute" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it 'and it returns the json for the patched post' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(200)
-      end
-      it "unable to #put update on another family member's recipe" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it "unable to #patch update on another family member's recipe" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-    end
-    context "GET /notifications Notifications#destroy" do
-      it "works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it 'can sucessfully delete a post' do
-        expect(response).to have_http_status(200)
-      end
-      xit 'returns 404 for missing content' do
-        expect(response).to have_http_status(404)
-      end
-      it "unable to delete on another family member's recipe" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-    end
-    context "GET /notifications Notifications#search" do
-      it "works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it "returns unprocessible entity if type doesn't match" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(:unprocessable_entity)
-      end
-      it "can return a notification by tag matches" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it "can return a notification by notification name matches" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it "can return a notification by ingredient matches" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-    end
+        expect(@comparable_notifications.ids).to include(json["data"].first["id"].to_i)
+        expect(json["data"].first["type"]).to eq("notifications")
+        expect(@comparable_notifications.ids).to include(json["data"].second["id"].to_i)
+        expect(json["data"].second["type"]).to eq("notifications")
+        
+        actual = json["data"].first
+        expect(actual).to include("id")
+        expect(actual).to include("type")
+        
+        expected_attributes = ["notifiable-type", "notifiable-id", "member-id", "mentioned", "viewed", "created-at", "updated-at"]
+        actual_attributes = json["data"].first["attributes"].keys
+        expect(actual_attributes).to eq(expected_attributes)
 
+        expected_relationships = ["notifiable", "member"]
+        json["data"].first["relationships"].each do |relationship|
+          expect(expected_relationships).to include(relationship[0])
+          expect(relationship[1]["data"]).to include("id")
+          expect(relationship[1]["data"]).to include("type")
+        end
+        expect(json["data"].first["relationships"]["member"]["links"]).to include("self")
+      end
+      it 'should return just unviewed notifications' do
+        view_array = @comparable_notifications.pluck(:viewed)
+        for i in 0..view_array.length-1
+          expect(view_array[i]).to eq(false)
+        end
+        get "/v1/notifications", :headers => @auth_headers
+        json = JSON.parse(response.body)
+        expect(response).to have_http_status(200)
+        viewed_array = @comparable_notifications.pluck(:viewed)
+        actual_array = []
+        json["data"].each {|record| actual_array  << record["attributes"]["viewed"]}
+
+        expect(viewed_array.length).to eq(actual_array.length)
+        for i in 0..viewed_array.length-1
+          expect(actual_array[i]).to eq(false) # Response should be false.
+          expect(viewed_array[i]).to eq(true) # Record should be marked false after sent.
+        end
+      end
+    end
+    context "GET /all_notifications Notifications#all" do
+      before(:each) do
+        @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @member.id)
+        @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
+        @auth_headers = @member.create_new_auth_token
+        notification_member_ids = []
+        @comparable_children.each {|child| notification_member_ids << child.notifications.pluck(:member_id).first}
+        @comparable_notifications = Notification.where(member_id: @comparable_children)
+        @comparable_notifications.last.update_attributes(viewed: true)
+      end
+      it '200 and schema matches' do
+        get "/v1/all_notifications", :headers => @auth_headers
+        json = JSON.parse(response.body)
+        expect(response).to have_http_status(200)
+        expect(@comparable_notifications.ids).to include(json["data"].first["id"].to_i)
+        expect(json["data"].first["type"]).to eq("notifications")
+        expect(@comparable_notifications.ids).to include(json["data"].second["id"].to_i)
+        expect(json["data"].second["type"]).to eq("notifications")
+        
+        actual = json["data"].first
+        expect(actual).to include("id")
+        expect(actual).to include("type")
+        
+        expected_attributes = ["notifiable-type", "notifiable-id", "member-id", "mentioned", "viewed", "created-at", "updated-at"]
+        actual_attributes = json["data"].first["attributes"].keys
+        expect(actual_attributes).to eq(expected_attributes)
+
+        expected_relationships = ["notifiable", "member"]
+        json["data"].first["relationships"].each do |relationship|
+          expect(expected_relationships).to include(relationship[0])
+          expect(relationship[1]["data"]).to include("id")
+          expect(relationship[1]["data"]).to include("type")
+        end
+        expect(json["data"].first["relationships"]["member"]["links"]).to include("self")
+      end
+      it 'should return viewed and unviewed notifications' do
+        get "/v1/all_notifications", :headers => @auth_headers
+        json = JSON.parse(response.body)
+        expect(response).to have_http_status(200)
+        viewed_array = @comparable_notifications.pluck(:viewed)
+        actual_array = []
+        json["data"].each {|record| actual_array  << record["attributes"]["viewed"]}
+        expect(actual_array[0]).to eq(false) # First Response should be false.
+        expect(actual_array[1]).to eq(true) # Second Response should be true.
+        expect(viewed_array.length).to eq(actual_array.length)
+        for i in 0..viewed_array.length-1
+          expect(viewed_array[i]).to eq(true) # Record should be marked false after sent.
+        end
+      end
+    end
   end # Members / Same Family Describe
   
-  describe ':: Members / Same Family - Admin Role ::' do
+  describe ':: Unauthorized to Other Users ::' do
     before do
-      family_member = FactoryBot.create(:family_member).member
-      @member = family_member.member
-      
+      @family = FactoryBot.create(:family)
+      @family_member = FactoryBot.create(:family_member, family_id: @family.id)
+      @member = @family_member.member
+      @commenter_family_member = FactoryBot.create(:family_member, family_id: @family.id)
+      @commenter = @commenter_family_member.member
     end
-    context "GET /notifications Notifications#update" do
-      it "able to #put update on another family member's recipe" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it "able to #patch update on another family member's recipe" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-    end
-    context "GET /notifications Notifications#destroy" do
-      it "able to delete on another family member's recipe" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-    end
-  end # Members / Same Family - Admin Role Describe
-  
-  describe ':: Members / Unauthorized to Family ::' do
-    before do
-      non_family = FactoryBot.create(:family_member)
-      @non_family_member = non_family.member
-      FactoryBot.create_list(:recipe, 5)
-      @member = FactoryBot.create(:family_member).member
-    end
-    context "GET /notifications Notifications#index" do
-      it "works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it 'and can get all of the records available to the Member\'s policy via index' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-      it 'and getting the index returns the count and type of reactions for each record' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-    end
-    context "GET /notifications Notifications#show" do
-      it "works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it 'and it shows the notification requested' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-      it 'and it shows the requested recipe\'s comments and reactions' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-    end
-    context "GET /notifications Notifications#create" do
-      it "works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it 'and it returns the json for the newly created post' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-    end
-    context "GET /notifications Notifications#update" do
-      it "#put works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it 'and it returns the json for the putted post' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-      it "#patch can replace a single attribute" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it 'and it returns the json for the patched post' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/notifications'
-        expect(response).to have_http_status(403)
-      end
-    end
-    context "GET /notifications Notifications#destroy" do
-      it "works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it 'can sucessfully delete a post' do
-        expect(response).to have_http_status(403)
-      end
-      xit 'returns 404 for missing content' do
-        expect(response).to have_http_status(403)
-      end
-    end
-    context "GET /notifications Notifications#search" do
-      it "works! (now write some real specs)" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it "returns unprocessible entity if type doesn't match" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it "can return a notification by tag matches" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it "can return a notification by notification name matches" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it "can return a notification by ingredient matches" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-    end
+    context "GET /v1/notifications Notifications#unviewed" do
+      before(:each) do
+        login_auth(@member) # @member = @member
+        @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @member.id)
+        logout_auth(@member) # @member = nil
+        login_auth(@commenter) # @member = @commenter
+        @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
 
+        @auth_headers = @member.create_new_auth_token
+        notification_member_ids = []
+        @comparable_children.each {|child| notification_member_ids << child.notifications.pluck(:member_id).first}
+        @comparable_notifications = Notification.where(member_id: @comparable_children)
+      end
+      it 'should return an empty array notifications' do
+        get "/v1/notifications", :headers => @auth_headers
+        json = JSON.parse(response.body)
+        expect(json).to eq({"data"=>[]})
+        expect(response).to have_http_status(200)
+      end
+    end
+    context "GET /all_notifications Notifications#all" do
+      before(:each) do
+        login_auth(@member) # @member = @member
+        @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @member.id)
+        logout_auth(@member) # @member = nil
+        login_auth(@commenter) # @member = @commenter
+        @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
+        
+        @auth_headers = @member.create_new_auth_token
+        notification_member_ids = []
+        @comparable_children.each {|child| notification_member_ids << child.notifications.pluck(:member_id).first}
+        @comparable_notifications = Notification.where(member_id: @comparable_children)
+        @comparable_notifications.last.update_attributes(viewed: true)
+      end
+      it 'should return an empty array notifications' do
+        get "/v1/all_notifications", :headers => @auth_headers
+        json = JSON.parse(response.body)
+        expect(json).to eq({"data"=>[]})
+        expect(response).to have_http_status(200)
+      end
+    end
   end # Members / Unauthorized to Family Describe
   
-  describe ':: Unknown User ::' do
+  describe ':: Unauthorized to Unknown User ::' do
     before do
-      @member = nil
+      @family = FactoryBot.create(:family)
+      @family_member = FactoryBot.create(:family_member, family_id: @family.id)
+      @member = @family_member.member
+      @commenter_family_member = FactoryBot.create(:family_member, family_id: @family.id)
+      @commenter = @commenter_family_member.member
     end
-    context "GET /notifications Notifications#index" do
-      it "returns a 401 error saying they are not authenticated" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+    context "GET /v1/notifications Notifications#unviewed" do
+      before(:each) do
+        login_auth(@member) # @member = @member
+        @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @member.id)
+        logout_auth(@member) # @member = nil
+        @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
+      end
+      it 'should return an empty array notifications' do
+        get "/v1/notifications"
+        json = JSON.parse(response.body)
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /notifications Notifications#show" do
-      it "returns a 401 error saying they are not authenticated" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(401)
+    context "GET /all_notifications Notifications#all" do
+      before(:each) do
+        login_auth(@member) # @member = @member
+        @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @member.id)
+        logout_auth(@member) # @member = nil
+        @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
+        @comparable_notifications = Notification.where(member_id: @comparable_children)
+        @comparable_notifications.last.update_attributes(viewed: true)
       end
-    end
-    context "GET /notifications Notifications#create" do
-      it "returns a 401 error saying they are not authenticated" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(401)
-      end
-    end
-    context "GET /notifications Notifications#update" do
-      it "#put returns a 401 error saying they are not authenticated" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(401)
-      end
-      it "#patch returns a 401 error saying they are not authenticated" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(401)
-      end
-    end
-    context "GET /notifications Notifications#destroy" do
-      it "returns a 401 error saying they are not authenticated" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(401)
-      end
-    end
-    context "GET /notifications Notifications#search" do
-      it "returns a 401 error saying they are not authenticated" do
-        get '/v1/notifications'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+      it 'should return an empty array notifications' do
+        get "/v1/all_notifications"
+        json = JSON.parse(response.body)
         expect(response).to have_http_status(401)
       end
     end
 
   end # Unknown User Describe
-
-  describe ':: Notifications Functionality ::' do
-    context 'Testing Posts ::' do
-      it 'each mentioned member in the resource body gets a mention notificaiton' do
-        
-      end
-    end
-    context 'Testing Recipes ::' do
-      it 'each mentioned member in the resource body gets a mention notificaiton' do
-        
-      end
-    end
-    context 'Testing Events ::' do
-      it 'each mentioned member in the resource body gets a mention notificaiton' do
-        
-      end
-    end
-    context 'Testing EventsRsvp ::' do
-      it 'creates a notification for the each RSVP\'d member of the Event' do
-        
-      end
-      it 'creates a notification for the Event Host' do
-        
-      end
-    end
-    context 'Testing Comments ::' do
-      it 'each mentioned member in the resource body gets a mention notificaiton' do
-        
-      end
-      it 'creates a notification for the member of the parent resource' do
-        
-      end
-      it 'creates a notification for the members of sibiling Comments under the resource' do
-        
-      end
-    end
-    context 'Testing CommentReplys ::' do
-      it 'each mentioned member in the resource body gets a mention notificaiton' do
-        
-      end
-      it 'creates a notification for the member of the parent Comment' do
-        
-      end
-      it 'creates a notification for the members of sibiling CommentReplys under the Comment' do
-        
-      end
-    end
-    context 'Testing Reactions ::' do
-      it 'creates a notification for the member of the Reacted resource' do
-        
-      end
-    end
-    context 'Testing FamilyMember ::' do
-      it 'creates a notification for each FamilyMember on FamilyMember commit' do
-        
-      end
-    end
-  end
   
 end # notification RSpec
