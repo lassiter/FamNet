@@ -1,7 +1,7 @@
 class FamilyMemberPolicy < ApplicationPolicy
 
   def initialize(current_user, record)
-    # binding.pry
+    # 
     @current_user   = current_user
     @record = record
   end

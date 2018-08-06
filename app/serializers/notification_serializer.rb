@@ -4,7 +4,7 @@ class NotificationSerializer < ActiveModel::Serializer
   has_one :notifiable 
   # do
   #   notifiable_type = object.notifiable_type
-  #   binding.pry
+  #   
   #   link(:notifiable) { api_v1_post_path(id: object.notifiable_id) } if notifiable_type == "Post"
   #   link(:notifiable) { api_v1_events_path(id: object.notifiable_id) } if notifiable_type == "Event"
   #   link(:notifiable) { api_v1_recipes_path(id: object.notifiable_id) } if notifiable_type == "Recipe"

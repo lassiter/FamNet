@@ -8,7 +8,7 @@ class NotificationPolicy < ApplicationPolicy
   end
 
   def unviewed?
-    binding.pry
+    
     @current_user
   end
 
