@@ -83,7 +83,6 @@ RSpec.shared_examples_for "notifiable" do
       end
       it 'creates the notification on save' do
         Notification.delete_all
-        binding.pry
         expect {@comparable.save}.to change{Notification.count}.from(0).to(1)
       end
     end
