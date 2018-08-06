@@ -8,6 +8,7 @@ RSpec.describe Post, type: :model do
     it { should belong_to(:family) }
     it { should belong_to(:member) }
   end
+  it_behaves_like 'notifiable'
   describe "valid" do
     before do
      @member_id = FactoryBot.create(:family_member, authorized_at: DateTime.now).member_id

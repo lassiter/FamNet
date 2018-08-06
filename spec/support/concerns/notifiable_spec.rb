@@ -37,8 +37,14 @@ RSpec.shared_examples_for "notifiable" do
     elsif model == Post
         @comparable = FactoryBot.build(:post, family_id: @family.id, member_id: @subject_member.id)
         @comparable_class = @comparable.class.to_s
-    elsif model == Event
-      "foo"
+    elsif model == EventRsvp
+        @subject = FactoryBot.build(:event, family_id: @family.id, member_id: @subject_member.id)
+        @subject_class = @comparable.class.to_s
+        @comparable = FactoryBot.build(:event_rsvp, family_id: @family.id, member_id: @subject_member.id)
+        @comparable_class = @comparable.class.to_s
+    elsif model == CommentReply
+        @comparable = FactoryBot.build(:comment_reply, comment_id: @subject.id, member_id: @mentioning_member.id)
+        @comparable_class = @comparable.class.to_s
     end
   end
 
@@ -77,19 +83,20 @@ RSpec.shared_examples_for "notifiable" do
         expect {@comparable.notifications}.to_not raise_error
       end
       it 'creates the notification on save' do
+        Notification.delete_all
         expect {@comparable.save}.to change{Notification.count}.from(0).to(1)
       end
     end
   end
   context 'Mention Integration Tests' do
     it 'creates two notifications when mentioned' do
-      skip if model == Reaction
+      skip if model == Reaction || EventRsvp
       name_to_be_mentioned = @mentioned_member.attributes.slice("name", "surname").values.join(" ").insert(0, "@")
       @comparable.body.insert(-1, name_to_be_mentioned)
       expect{@comparable.save}.to change{Notification.count}.from(0).to(2)
     end
     it 'expects mention notifications to be marked as true' do
-      skip if model == Reaction
+      skip if model == Reaction || EventRsvp
       name_to_be_mentioned = @mentioned_member.attributes.slice("name", "surname").values.join(" ").insert(0, "@")
       @comparable.body.insert(-1, name_to_be_mentioned)
       @comparable.save
@@ -99,6 +106,7 @@ RSpec.shared_examples_for "notifiable" do
   end
   context 'Specific Cases' do
     it "a notification record created on @comparable commit for the @subject object's member on model action" do
+      Notification.delete_all
       expect{@comparable.save}.to change{Notification.count}.from(0).to(1)
     end
   end # Specific Cases `context`
