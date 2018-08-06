@@ -89,10 +89,8 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
     t.boolean "locked", default: false
     t.bigint "family_id"
     t.bigint "member_id"
-    t.bigint "event_rsvp_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["event_rsvp_id"], name: "index_events_on_event_rsvp_id"
     t.index ["family_id"], name: "index_events_on_family_id"
     t.index ["member_id"], name: "index_events_on_member_id"
   end

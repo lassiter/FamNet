@@ -17,7 +17,6 @@ class CreateEvents < ActiveRecord::Migration[5.2]
 
       t.references :family
       t.references :member
-      t.references :event_rsvp, index: true
       t.timestamps
     end
   end

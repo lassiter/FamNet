@@ -38,9 +38,8 @@ RSpec.shared_examples_for "notifiable" do
         @comparable = FactoryBot.build(:post, family_id: @family.id, member_id: @subject_member.id)
         @comparable_class = @comparable.class.to_s
     elsif model == EventRsvp
-        @subject = FactoryBot.build(:event, family_id: @family.id, member_id: @subject_member.id)
-        @subject_class = @comparable.class.to_s
-        @comparable = FactoryBot.build(:event_rsvp, family_id: @family.id, member_id: @subject_member.id)
+        @subject = FactoryBot.create(:event, family_id: @family.id, member_id: @subject_member.id)
+        @comparable = FactoryBot.build(:event_rsvp, event_id: @subject.id, member_id: @mentioning_member.id)
         @comparable_class = @comparable.class.to_s
     elsif model == CommentReply
         @comparable = FactoryBot.build(:comment_reply, comment_id: @subject.id, member_id: @mentioning_member.id)
@@ -84,6 +83,7 @@ RSpec.shared_examples_for "notifiable" do
       end
       it 'creates the notification on save' do
         Notification.delete_all
+        binding.pry
         expect {@comparable.save}.to change{Notification.count}.from(0).to(1)
       end
     end
