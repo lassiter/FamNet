@@ -14,6 +14,7 @@ RSpec.describe CommentReply, type: :model do
     @parent_class = @parent.class.to_s
     @subject = FactoryBot.create(:comment, commentable_type: @parent_class, commentable_id: @parent.id, member_id: @member_id)
   end
+  it_behaves_like 'interaction'
   it_behaves_like 'notifiable'
   describe "valid" do
     it 'FactoryBot factory should be valid' do

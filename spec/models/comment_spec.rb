@@ -9,7 +9,7 @@ RSpec.describe Comment, type: :model do
     it { should belong_to(:member) }
   end
   it_behaves_like 'notifiable'
-
+  it_behaves_like 'interaction'
   describe "Post Subject" do
     before do
       @family_member = FactoryBot.create(:family_member, authorized_at: DateTime.now)

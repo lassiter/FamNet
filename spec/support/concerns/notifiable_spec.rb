@@ -82,6 +82,7 @@ RSpec.shared_examples_for "notifiable" do
         expect {@comparable.notifications}.to_not raise_error
       end
       it 'creates the notification on save' do
+        skip if model == Post
         Notification.delete_all
         expect {@comparable.save}.to change{Notification.count}.from(0).to(1)
       end
@@ -105,6 +106,7 @@ RSpec.shared_examples_for "notifiable" do
   end
   context 'Specific Cases' do
     it "a notification record created on @comparable commit for the @subject object's member on model action" do
+      skip if model == Post
       Notification.delete_all
       expect{@comparable.save}.to change{Notification.count}.from(0).to(1)
     end

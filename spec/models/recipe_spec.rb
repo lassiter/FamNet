@@ -8,7 +8,7 @@ RSpec.describe Recipe, type: :model do
     it { should have_many(:tags) }
     it { should belong_to(:member) }
   end
-  it_behaves_like 'notifiable'
+  it_behaves_like 'interaction'
   describe "valid" do
     it 'FactoryBot factory should be valid' do
       expect(FactoryBot.build(:recipe, member_id: FactoryBot.create(:family_member).member_id)).to be_valid
