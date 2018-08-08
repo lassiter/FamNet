@@ -13,7 +13,7 @@ RSpec.describe "Families", type: :request do
       end
       
       it "works! (now write some real specs)" do
-        get '/v1/recipes'
+        get '/v1/family'
         json = JSON.parse(response.body) 
         header = JSON.parse(response.header)
         expect(response).to have_http_status(200)
