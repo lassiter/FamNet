@@ -44,7 +44,8 @@ Rails.application.routes.draw do
           end
         end
       end
-      resources :family
+      resources :families, only: [:index, :show, :update, :destroy]
+      post 'families', action: :invite_to, controller: 'families'
       resources :family_configs, only: [:show, :update]
     end #v1
   end #api

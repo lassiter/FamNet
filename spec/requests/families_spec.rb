@@ -3,326 +3,596 @@ require 'rails_helper'
 RSpec.describe "Families", type: :request do
   describe ':: Members / Same Family ::' do
     before do
-      family_member = FactoryBot.create(:family_member).member
+      @family = FactoryBot.create(:family)
+      family_member = FactoryBot.create(:family_member, family_id: @family.id)
       @member = family_member.member
-      
+      login_auth(@member)
     end
-    context "GET /recipes Recipes#index" do
+    context "GET /families Family#index" do
       before(:each) do
-      @member.create_new_auth_token
+        @auth_headers = @member.create_new_auth_token
       end
-      
-      it "works! (now write some real specs)" do
-        get '/v1/family'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+      it "200 status and matches schema" do
+        get '/v1/families', :headers => @auth_headers
+        actual = JSON.parse(response.body)["data"].first
         expect(response).to have_http_status(200)
+        expect(actual).to include("type")
+        expect(actual).to include("id")
+        expect(actual["attributes"]).to include("family-name")
+        expect(actual["links"]).to include("self")
       end
-      it 'and can get all of the records available to the Member\'s policy via index' do
-        get '/v1/recipes'
+      it 'and can get all of the records available in the instance' do
+        get '/v1/families'
+        actual = JSON.parse(response.body)["data"].count
+        expected = Family.count
         expect(response).to have_http_status(200)
-      end
-      it 'and getting the index returns the count and type of reactions for each record' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(200)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(200)
+        expect(actual).to eq(expected)
       end
     end
-    context "GET /recipes Recipes#show" do
-      it "works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
+    context "GET /families/:id Family#show" do
+      before do
+        FactoryBot.create_list(:family_member, 5, family_id: @family.id)
       end
-      it 'and it shows the recipe requested' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(200)
+      before(:each) do
+        @auth_headers = @member.create_new_auth_token
       end
-      it 'and it shows the requested recipe\'s comments and reactions' do
-        get '/v1/recipes'
+      it "200 status and matches schema" do
+        get "/v1/families/#{@family.id}", :headers => @auth_headers
+        actual = JSON.parse(response.body)["data"].first
         expect(response).to have_http_status(200)
+        expect(actual).to include("type")
+        expect(actual).to include("id")
+        expect(actual["attributes"]).to include("name")
+        expect(actual["attributes"]).to include("surname")
+        expect(actual["attributes"]).to include("nickname")
+        expect(actual["attributes"]).to include("image")
+        expect(actual["attributes"]).to include("image-store")
+        expect(actual["relationships"]["families"]["data"].first).to include("id")
+        expect(actual["relationships"]["families"]["data"].first).to include("type")
+        expect(actual["relationships"]["families"]["links"]).to include("related")
+        expect(actual["links"]).to include("self")
       end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/recipes'
+      it 'and can get all of the member records available in the family' do
+        get "/v1/families/#{@family.id}", :headers => @auth_headers
+        actual = JSON.parse(response.body)["data"].count
+        expected = FamilyMember.where(family_id: @family.id).count
         expect(response).to have_http_status(200)
+        expect(actual).to eq(expected)
       end
     end
-    context "GET /recipes Recipes#create" do
-      it "works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
+    context "PUT-PATCH /families/:id Family#update" do
+      before do
+        update = FactoryBot.build(:family)
+        @update_params = {
+          "id": @family.id,
+          "family": {
+            "id": @family.id,
+            "attributes": {
+              "family_name": update.family_name
+            }
+          }
+        }
       end
-      it 'and it returns the json for the newly created post' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(200)
+      context "Users" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "user")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for updates #put" do
+          put "/v1/families/#{@family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not be authorized for updates #patch" do
+          patch "/v1/families/#{@family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(200)
+      context "Moderator" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "moderator")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for updates #put" do
+          put "/v1/families/#{@family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not be authorized for updates #patch" do
+          patch "/v1/families/#{@family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
-    end
-    context "GET /recipes Recipes#update" do
-      it "#put works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it 'and it returns the json for the putted post' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(200)
-      end
-      it "#patch can replace a single attribute" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it 'and it returns the json for the patched post' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(200)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(200)
-      end
-      it "unable to #put update on another family member's recipe" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it "unable to #patch update on another family member's recipe" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-    end
-    context "GET /recipes Recipes#destroy" do
-      it "works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it 'can sucessfully delete a post' do
-        expect(response).to have_http_status(200)
-      end
-      xit 'returns 404 for missing content' do
-        expect(response).to have_http_status(404)
-      end
-      it "unable to delete on another family member's recipe" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+      context "Admin" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "admin")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for updates #put" do
+          put "/v1/families/#{@family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not be authorized for updates #patch" do
+          patch "/v1/families/#{@family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
     end
-    context "GET /recipes Recipes#search" do
-      it "works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
+    context "DELETE /families/:id Family#destroy" do
+      before do
+        update = FactoryBot.build(:family)
+        @delete_params = {
+          "family": {
+            "id": @family.id
+          }
+        }
       end
-      it "returns unprocessible entity if type doesn't match" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(:unprocessable_entity)
+      context "Users" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "user")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for delete" do
+          delete "/v1/families/#{@family.id}", :params => @delete_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
-      it "can return a recipe by tag matches" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
+      context "Moderator" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "moderator")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for delete" do
+          delete "/v1/families/#{@family.id}", :params => @delete_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
-      it "can return a recipe by recipe name matches" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
-      end
-      it "can return a recipe by ingredient matches" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(200)
+      context "Admin" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "admin")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for delete" do
+          delete "/v1/families/#{@family.id}", :params => @delete_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
     end
-
+    context "POST /families Family#invite_to" do
+      before do
+        @invite_emails = "#{Faker::Internet.email}, #{Faker::Internet.email}"
+        @mass_invite_params = {
+          "id": @family.id,
+          "family": {
+            "id": @family.id,
+            "invite_emails": @invite_emails
+          }
+        }
+      end
+      context "User" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "user")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for mass invites" do
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not increase invite count" do
+          Invite.delete_all
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+          expect(Invite.count).to eq(0)
+        end
+      end
+      context "Moderator" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "moderator")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for mass invites" do
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not increase invite count" do
+          Invite.delete_all
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+          expect(Invite.count).to eq(0)
+        end
+      end
+      context "Admin" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "admin")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should be authorized for mass invites" do
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          response_message = JSON.parse(response.body)["data"]["message"]
+          expect(response_message).to include(@invite_emails)
+          expect(response).to have_http_status(200)
+        end
+        it "should increase invite count" do
+          Invite.delete_all
+          expect(Invite.count).to eq(0)
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(200)
+          expect(Invite.count).to eq(@invite_emails.split(', ').count)
+        end
+      end
+    end
   end # Members / Same Family Describe
   
-  describe ':: Members / Same Family - Admin Role ::' do
+  describe ':: Members / Same Family - Owner Role ::' do
     before do
-      family_member = FactoryBot.create(:family_member).member
+      @family = FactoryBot.create(:family)
+      family_member = FactoryBot.create(:family_member, family_id: @family.id, user_role: "owner")
       @member = family_member.member
-      
+      login_auth(@member)
     end
-    context "GET /recipes Recipes#update" do
-      it "able to #put update on another family member's recipe" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+    context "PUT-PATCH /families/:id Family#update" do
+      before(:each) do
+        update = FactoryBot.build(:family)
+        @update_params = {
+          "id": @family.id,
+          "family": {
+            "id": @family.id,
+            "attributes": {
+              "family_name": update.family_name
+            }
+          }
+        }
       end
-      it "able to #patch update on another family member's recipe" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+      before(:each) do
+        @auth_headers = @member.create_new_auth_token
+      end
+      it "should be authorized for updates #put" do
+        put "/v1/families/#{@family.id}", :params => @update_params, :headers => @auth_headers
+        actual = JSON.parse(response.body)["data"]
+        expect(actual).to include("type")
+        expect(actual).to include("id")
+        expect(actual["id"].to_i).to eq(@family.id)
+        expect(actual["attributes"]["family-name"]).to_not eq(@family.family_name)
+        expect(actual["attributes"]["family-name"]).to eq(@update_params[:family][:attributes][:family_name])
+        expect(actual["attributes"]).to include("family-name")
+        expect(actual["links"]).to include("self")
+        expect(response).to have_http_status(200)
+      end
+      it "should be authorized for updates #patch" do
+        patch "/v1/families/#{@family.id}", :params => @update_params, :headers => @auth_headers
+        actual = JSON.parse(response.body)["data"]
+        expect(actual).to include("type")
+        expect(actual).to include("id")
+        expect(actual["id"].to_i).to eq(@family.id)
+        expect(actual["attributes"]["family-name"]).to_not eq(@family.family_name)
+        expect(actual["attributes"]["family-name"]).to eq(@update_params[:family][:attributes][:family_name])
+        expect(actual["attributes"]).to include("family-name")
+        expect(actual["links"]).to include("self")
+        expect(response).to have_http_status(200)
       end
     end
-    context "GET /recipes Recipes#destroy" do
-      it "able to delete on another family member's recipe" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+    context "DELETE /families/:id Family#destroy" do
+      before do
+        update = FactoryBot.build(:family)
+        @delete_params = {
+          "family": {
+            "id": @family.id
+          }
+        }
+      end
+      before(:each) do
+        @auth_headers = @member.create_new_auth_token
+      end
+      it "should be authorized for delete" do
+        delete "/v1/families/#{@family.id}", :params => @delete_params, :headers => @auth_headers
+        expect(response).to have_http_status(204)
+        expect(FamilyConfig.where(family_id: @family.id)).to eq([])
+      end
+    end
+    context "POST /families Family#invite_to" do
+      before do
+        @invite_emails = "#{Faker::Internet.email}, #{Faker::Internet.email}"
+        @mass_invite_params = {
+          "id": @family.id,
+          "family": {
+            "id": @family.id,
+            "invite_emails": @invite_emails
+          }
+        }
+      end
+      before(:each) do
+        @auth_headers = @member.create_new_auth_token
+      end
+      it "should be authorized for mass invites" do
+        post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+        response_message = JSON.parse(response.body)["data"]["message"]
+        expect(response_message).to include(@invite_emails)
+        expect(response).to have_http_status(200)
+      end
+      it "should increase invite count" do
+        Invite.delete_all
+        expect(Invite.count).to eq(0)
+        post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+        expect(response).to have_http_status(200)
+        expect(Invite.count).to eq(@invite_emails.split(', ').count)
       end
     end
   end # Members / Same Family - Admin Role Describe
   
-  describe ':: Members / Unauthorized to Family ::' do
+  describe ':: Members / Outside of Family ::' do
     before do
-      non_family = FactoryBot.create(:family_member)
-      @non_family_member = non_family.member
-      FactoryBot.create_list(:recipe, 5)
-      @member = FactoryBot.create(:family_member).member
+      @other_family = FactoryBot.create(:family)
+      @non_family_member = FactoryBot.create(:family_member, family_id: @other_family.id).member
+      @family = FactoryBot.create(:family)
+      @member = FactoryBot.create(:family_member, family_id: @family.id).member
     end
-    context "GET /recipes Recipes#index" do
-      it "works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+    context "GET /families Family#index" do
+      before(:each) do
+        @auth_headers = @member.create_new_auth_token
       end
-      it 'and can get all of the records available to the Member\'s policy via index' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(403)
+      it "200 status and matches schema" do
+        get '/v1/families', :headers => @auth_headers
+        actual = JSON.parse(response.body)["data"].first
+        expect(response).to have_http_status(200)
+        expect(actual).to include("type")
+        expect(actual).to include("id")
+        expect(actual["attributes"]).to include("family-name")
+        expect(actual["links"]).to include("self")
       end
-      it 'and getting the index returns the count and type of reactions for each record' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(403)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(403)
+      it 'and can get all of the records available in the instance' do
+        get '/v1/families'
+        actual = JSON.parse(response.body)["data"].count
+        expected = Family.count
+        expect(response).to have_http_status(200)
+        expect(actual).to eq(expected)
       end
     end
-    context "GET /recipes Recipes#show" do
-      it "works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+    context "GET /families/:id Family#show" do
+      before do
+        FactoryBot.create_list(:family_member, 5, family_id: @other_family.id)
       end
-      it 'and it shows the recipe requested' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(403)
+      before(:each) do
+        @auth_headers = @member.create_new_auth_token
       end
-      it 'and it shows the requested recipe\'s comments and reactions' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(403)
-      end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/recipes'
+      it "and can't get member records for other family" do
+        get "/v1/families/#{@other_family.id}", :headers => @auth_headers
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /recipes Recipes#create" do
-      it "works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+    context "PUT-PATCH /families/:id Family#update" do
+      before do
+        update = FactoryBot.build(:family)
+        @update_params = {
+          "id": @other_family.id,
+          "family": {
+            "id": @other_family.id,
+            "attributes": {
+              "family_name": update.family_name
+            }
+          }
+        }
       end
-      it 'and it returns the json for the newly created post' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(403)
+      context "Users" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "user")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for updates #put" do
+          put "/v1/families/#{@other_family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not be authorized for updates #patch" do
+          patch "/v1/families/#{@other_family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(403)
+      context "Moderator" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "moderator")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for updates #put" do
+          put "/v1/families/#{@other_family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not be authorized for updates #patch" do
+          patch "/v1/families/#{@other_family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+      end
+      context "Admin" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "admin")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for updates #put" do
+          put "/v1/families/#{@other_family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not be authorized for updates #patch" do
+          patch "/v1/families/#{@other_family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+      end
+      context "Owner" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "admin")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for updates #put" do
+          put "/v1/families/#{@other_family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not be authorized for updates #patch" do
+          patch "/v1/families/#{@other_family.id}", :params => @update_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
     end
-    context "GET /recipes Recipes#update" do
-      it "#put works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+    context "DELETE /families/:id Family#destroy" do
+      before do
+        update = FactoryBot.build(:family)
+        @delete_params = {
+          "family": {
+            "id": @other_family.id
+          }
+        }
       end
-      it 'and it returns the json for the putted post' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(403)
+      context "Users" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "user")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for delete" do
+          delete "/v1/families/#{@other_family.id}", :params => @delete_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
-      it "#patch can replace a single attribute" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+      context "Moderator" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "moderator")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for delete" do
+          delete "/v1/families/#{@other_family.id}", :params => @delete_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
-      it 'and it returns the json for the patched post' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(403)
+      context "Admin" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "admin")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for delete" do
+          delete "/v1/families/#{@other_family.id}", :params => @delete_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
-      it 'shows the relationships and links to them in the json package' do
-        get '/v1/recipes'
-        expect(response).to have_http_status(403)
+      context "Owner" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "admin")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for delete" do
+          delete "/v1/families/#{@other_family.id}", :params => @delete_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
       end
     end
-    context "GET /recipes Recipes#destroy" do
-      it "works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+    context "POST /families Family#invite_to" do
+      before do
+        @invite_emails = "#{Faker::Internet.email}, #{Faker::Internet.email}"
+        @mass_invite_params = {
+          "id": @other_family.id,
+          "family": {
+            "id": @other_family.id,
+            "invite_emails": @invite_emails
+          }
+        }
       end
-      it 'can sucessfully delete a post' do
-        expect(response).to have_http_status(403)
+      context "User" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "user")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for mass invites" do
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not increase invite count" do
+          Invite.delete_all
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+          expect(Invite.count).to eq(0)
+        end
       end
-      xit 'returns 404 for missing content' do
-        expect(response).to have_http_status(403)
+      context "Moderator" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "moderator")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for mass invites" do
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not increase invite count" do
+          Invite.delete_all
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+          expect(Invite.count).to eq(0)
+        end
       end
-    end
-    context "GET /recipes Recipes#search" do
-      it "works! (now write some real specs)" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+      context "Admin" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "admin")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for mass invites" do
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not increase invite count" do
+          Invite.delete_all
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+          expect(Invite.count).to eq(0)
+        end
       end
-      it "returns unprocessible entity if type doesn't match" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it "can return a recipe by tag matches" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it "can return a recipe by recipe name matches" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
-      end
-      it "can return a recipe by ingredient matches" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(403)
+      context "Owner" do
+        before do
+          FamilyMember.where(family_id: @family.id, member_id: @member.id).first.update_attributes(user_role: "moderator")
+        end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
+        it "should not be authorized for mass invites" do
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+        end
+        it "should not increase invite count" do
+          Invite.delete_all
+          post "/v1/families", :params => @mass_invite_params, :headers => @auth_headers
+          expect(response).to have_http_status(403)
+          expect(Invite.count).to eq(0)
+        end
       end
     end
 
@@ -330,62 +600,54 @@ RSpec.describe "Families", type: :request do
   
   describe ':: Unknown User ::' do
     before do
+      @family = FactoryBot.create(:family)
       @member = nil
     end
-    context "GET /recipes Recipes#index" do
+    context "GET /families Family#index" do
+      it "200 status and matches schema" do
+        get '/v1/families'
+        actual = JSON.parse(response.body)["data"].first
+        expect(response).to have_http_status(200)
+        expect(actual).to include("type")
+        expect(actual).to include("id")
+        expect(actual["attributes"]).to include("family-name")
+        expect(actual["links"]).to include("self")
+      end
+      it 'and can get all of the records available in the instance' do
+        get '/v1/families'
+        actual = JSON.parse(response.body)["data"].count
+        expected = Family.count
+        expect(response).to have_http_status(200)
+        expect(actual).to eq(expected)
+      end
+    end
+    context "GET /families/:id Family#show" do
       it "returns a 401 error saying they are not authenticated" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+        get "/v1/families/#{@family.id}"
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /recipes Recipes#show" do
-      it "returns a 401 error saying they are not authenticated" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(401)
-      end
-    end
-    context "GET /recipes Recipes#create" do
-      it "returns a 401 error saying they are not authenticated" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
-        expect(response).to have_http_status(401)
-      end
-    end
-    context "GET /recipes Recipes#update" do
+    context "PUT-PATCH /families Family#update" do
       it "#put returns a 401 error saying they are not authenticated" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+        put "/v1/families/#{@family.id}"
         expect(response).to have_http_status(401)
       end
       it "#patch returns a 401 error saying they are not authenticated" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+        patch "/v1/families/#{@family.id}"
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /recipes Recipes#destroy" do
+    context "DELETE /families Family#destroy" do
       it "returns a 401 error saying they are not authenticated" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+        delete "/v1/families/#{@family.id}"
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /recipes Recipes#search" do
+    context "POST /families Family#invite_to" do
       it "returns a 401 error saying they are not authenticated" do
-        get '/v1/recipes'
-        json = JSON.parse(response.body) 
-        header = JSON.parse(response.header)
+        post "/v1/families"
         expect(response).to have_http_status(401)
       end
     end
-
   end # Unknown User Describe
 end

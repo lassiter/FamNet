@@ -1,4 +1,4 @@
-class MemberPolicy < ApplicationPolicy
+class FamilyPolicy < ApplicationPolicy
 
   attr_reader :current_user, :record
 
@@ -7,24 +7,20 @@ class MemberPolicy < ApplicationPolicy
     @record = record
   end
 
-  def index?
-    @current_user
-  end
-
   def show?
-    current_user.id == record.id || current_user.family_members.exists?(family_id: record.family_ids) || is_admin?(record.family_ids, current_user)
-  end
-
-  def create?
-    is_admin?(record.family_id, current_user)
+    current_user.family_ids.include?(record.id)
   end
 
   def update?
-    current_user.id == record.id || is_admin?(record.family_ids, current_user)
+    is_owner?(record.id, current_user)
   end
 
   def destroy?
-    current_user.id == record.id || is_admin?(record.family_ids, current_user)
+    is_owner?(record.id, current_user)
+  end
+
+  def invite_to?
+    is_owner?(record.id, current_user) || is_admin?(record.id, current_user)
   end
 
   class Scope < Scope
@@ -33,17 +29,14 @@ class MemberPolicy < ApplicationPolicy
         authorized_ids = current_user.family_members.where.not(authorized_at: nil).pluck(:family_id).uniq
         unless authorized_ids.empty?
           records = Member.where(id: FamilyMember.where(family_id: authorized_ids).pluck(:member_id))
-          records # return array we've built up
+          records # return the wikis array we've built up
         else
-          records # return array we've built up
+          records # return the wikis array we've built up
         end
       end
     end #resolve
-
-      
   end
 
 
 
 end
-

@@ -2,7 +2,6 @@ class API::V1::InvitesController < ApplicationController
   before_action :authenticate_api_v1_member!
 
   def create
-    # 
     begin
       @invite = Invite.new(invite_params)
       authorize @invite
