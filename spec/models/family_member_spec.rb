@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe FamilyMember, type: :model do
-subject { described_class.new }
+  subject { described_class.new }
   describe "Associations" do
     it { should belong_to(:family) }
     it { should belong_to(:member) }
