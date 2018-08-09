@@ -389,7 +389,7 @@ RSpec.describe "CommentReplies", type: :request do
         }
       }
     end
-    context "GET /comments CommentReply#update" do
+    context "PUT-PATCH /comments CommentReply#update" do
       it "able to #put update on another family member's comment" do
         put "/v1/comments/#{@subject.id}/comment_replys/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         expected = @update_put_request_params[:comment_reply][:attributes].as_json
@@ -420,7 +420,7 @@ RSpec.describe "CommentReplies", type: :request do
         expect(actual_attributes["member-id"]).to eq(@comparable.member_id)
       end
     end
-    context "GET /comments CommentReply#destroy" do
+    context "DELETE /comments CommentReply#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -489,7 +489,7 @@ RSpec.describe "CommentReplies", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /comments CommentReply#create" do
+    context "POST /comments CommentReply#create" do
       before do
         login_auth(@unauthorized_member) # @member = @unauthorized_member 
         @comparable = FactoryBot.build(:comment_reply, comment_id: @subject.id, member_id: @authorized_member.id)
@@ -511,7 +511,7 @@ RSpec.describe "CommentReplies", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /comments CommentReply#update" do
+    context "PUT-PATCH /comments CommentReply#update" do
       before do
         login_auth(@unauthorized_member) # @member = @unauthorized_member 
         @comparable = FactoryBot.create(:comment_reply, comment_id: @subject.id, member_id: @authorized_member.id)
@@ -549,7 +549,7 @@ RSpec.describe "CommentReplies", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /comments CommentReply#destroy" do
+    context "DELETE /comments CommentReply#destroy" do
       before do
         login_auth(@unauthorized_member) # @member = @unauthorized_member 
       end
@@ -587,7 +587,7 @@ RSpec.describe "CommentReplies", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /comments CommentReply#create" do
+    context "POST /comments CommentReply#create" do
       it "returns a 401 error saying they are not authenticated" do
         comparable_for_create = FactoryBot.build(:comment_reply, comment_id: @subject.id, member_id: nil)
         @create_request_params = {
@@ -603,7 +603,7 @@ RSpec.describe "CommentReplies", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /comments CommentReply#update" do
+    context "PUT-PATCH /comments CommentReply#update" do
       before do
         @comparable = FactoryBot.create(:comment_reply, comment_id: @subject.id, member_id: @authorized_member.id)
         update = FactoryBot.build(:comment_reply, comment_id: @subject.id, member_id: nil)
@@ -637,7 +637,7 @@ RSpec.describe "CommentReplies", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /comments CommentReply#destroy" do
+    context "DELETE /comments CommentReply#destroy" do
       it "returns a 401 error saying they are not authenticated" do
         @comparable = FactoryBot.create(:comment_reply, comment_id: @subject.id, member_id: @authorized_member.id )
         @delete_request_params = {:id => @comparable.id }
