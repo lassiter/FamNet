@@ -309,7 +309,7 @@ RSpec.describe "Post API", type: :request do
         @second_member = FactoryBot.create(:family_member, family_id: @family.id, authorized_at: DateTime.now).member
         login_auth(@member)
       end
-      context "GET /posts Posts#update :: Member 2 => Member 1 ::" do
+      context "PUT-PATCH /posts Posts#update :: Member 2 => Member 1 ::" do
         before(:each) do
           @auth_headers = @member.create_new_auth_token
           @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @second_member.id )
@@ -379,9 +379,9 @@ RSpec.describe "Post API", type: :request do
         end
       end
       context "DELETE /posts Posts#delete :: Member 2 => Member 1" do
-      before(:each) do
-        @auth_headers = @member.create_new_auth_token
-      end
+        before(:each) do
+          @auth_headers = @member.create_new_auth_token
+        end
         it "unable to delete on another family member's post" do
           @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id )
           delete_request_params = {:id => @comparable.id }
@@ -433,7 +433,7 @@ RSpec.describe "Post API", type: :request do
         }
       }
     end
-    context "GET /posts Posts#update" do
+    context "PUT-PATCH /posts Posts#update" do
       it "able to #put update on another family member's post" do
         put "/v1/posts/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         expected = @update_put_request_params[:post][:attributes]
@@ -469,7 +469,7 @@ RSpec.describe "Post API", type: :request do
         expect(actual["updated-at"]).to_not eq(@comparable.updated_at)
       end
     end
-    context "GET /posts Posts#destroy" do
+    context "DELETE /posts Posts#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -536,7 +536,7 @@ RSpec.describe "Post API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /posts Posts#create" do
+    context "POST /posts Posts#create" do
       before do
         @comparable = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @member.id) # todo: replace with pundit
         @create_request_params = {
@@ -558,7 +558,7 @@ RSpec.describe "Post API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /posts Posts#update" do
+    context "PUT-PATCH /posts Posts#update" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -602,7 +602,7 @@ RSpec.describe "Post API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /posts Posts#destroy" do
+    context "DELETE /posts Posts#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -637,7 +637,7 @@ RSpec.describe "Post API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /posts Posts#create" do
+    context "POST /posts Posts#create" do
       it "returns a 401 error saying they are not authenticated" do
         comparable_for_create = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
         @create_request_params = {
@@ -654,7 +654,7 @@ RSpec.describe "Post API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /posts Posts#update" do
+    context "PUT-PATCH /posts Posts#update" do
       before do
         @comparable = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
         update_put = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
@@ -695,7 +695,7 @@ RSpec.describe "Post API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /posts Posts#destroy" do
+    context "DELETE /posts Posts#destroy" do
       it "returns a 401 error saying they are not authenticated" do
         @comparable = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
         @delete_request_params = {:id => @comparable.id }
