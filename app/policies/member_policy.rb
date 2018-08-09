@@ -7,6 +7,7 @@ class MemberPolicy < ApplicationPolicy
     @record = record
   end
 
+  # Returns Scope
   def index?
     @current_user
   end

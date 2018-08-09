@@ -3,7 +3,6 @@ class API::V1::NotificationsController < ApplicationController
   def unviewed
     begin
       @notifications = policy_scope(Notification).where(member_id: current_user.id).where.not(viewed: true)
-      # authorize @notifications
       unless @notifications.empty?
         render json: @notifications, each_serializer: NotificationSerializer, adapter: :json_api
         @notifications.update_all(viewed: true)
@@ -21,7 +20,6 @@ class API::V1::NotificationsController < ApplicationController
   def all
     begin
       @notifications = policy_scope(Notification).where(member_id: current_user.id)
-      # authorize @notifications
       unless @notifications.empty?
         render json: @notifications, each_serializer: NotificationSerializer, adapter: :json_api
         @notifications.where(viewed: false).update_all(viewed: true) if @notifications.exists?(viewed: false)

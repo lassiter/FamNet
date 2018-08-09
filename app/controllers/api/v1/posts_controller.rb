@@ -7,7 +7,6 @@ class API::V1::PostsController < ApplicationController
   def show
     begin
       @post = policy_scope(Post).find(params[:id])
-
       render json: @post, 
         include: ['comments', 'reactions', 'member'],
         serializer: PostSerializer, adapter: :json_api

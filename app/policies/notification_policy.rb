@@ -8,7 +8,6 @@ class NotificationPolicy < ApplicationPolicy
   end
 
   def unviewed?
-    
     @current_user
   end
 
