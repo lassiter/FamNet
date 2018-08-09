@@ -17,17 +17,16 @@ RSpec.describe "Notifications", type: :request do
         @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @member.id)
         @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
         @auth_headers = @member.create_new_auth_token
-        notification_member_ids = []
-        @comparable_children.each {|child| notification_member_ids << child.notifications.pluck(:member_id).first}
-        @comparable_notifications = Notification.where(member_id: @comparable_children)
+        @comparable_notifications = []
+        @comparable_children.each {|child| @comparable_notifications << child.notifications.first}
       end
       it '200 and schema matches' do
         get "/v1/notifications", :headers => @auth_headers
         json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
-        expect(@comparable_notifications.ids).to include(json["data"].first["id"].to_i)
+        expect(@comparable_notifications.pluck(:id)).to include(json["data"].first["id"].to_i)
         expect(json["data"].first["type"]).to eq("notifications")
-        expect(@comparable_notifications.ids).to include(json["data"].second["id"].to_i)
+        expect(@comparable_notifications.pluck(:id)).to include(json["data"].second["id"].to_i)
         expect(json["data"].second["type"]).to eq("notifications")
         
         actual = json["data"].first
@@ -54,14 +53,15 @@ RSpec.describe "Notifications", type: :request do
         get "/v1/notifications", :headers => @auth_headers
         json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
-        viewed_array = @comparable_notifications.pluck(:viewed)
+        # Refresh viewed_array to confirm change from false to true.
+        viewed_array = Notification.find(@comparable_notifications.pluck(:id)).pluck(:viewed)
         actual_array = []
         json["data"].each {|record| actual_array  << record["attributes"]["viewed"]}
 
         expect(viewed_array.length).to eq(actual_array.length)
         for i in 0..viewed_array.length-1
           expect(actual_array[i]).to eq(false) # Response should be false.
-          expect(viewed_array[i]).to eq(true) # Record should be marked false after sent.
+          expect(viewed_array[i]).to eq(true) # Record should be marked true after sent.
         end
       end
     end
@@ -70,18 +70,17 @@ RSpec.describe "Notifications", type: :request do
         @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @member.id)
         @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
         @auth_headers = @member.create_new_auth_token
-        notification_member_ids = []
-        @comparable_children.each {|child| notification_member_ids << child.notifications.pluck(:member_id).first}
-        @comparable_notifications = Notification.where(member_id: @comparable_children)
+        @comparable_notifications = []
+        @comparable_children.each {|child| @comparable_notifications << child.notifications.first}
         @comparable_notifications.last.update_attributes(viewed: true)
       end
       it '200 and schema matches' do
         get "/v1/all_notifications", :headers => @auth_headers
         json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
-        expect(@comparable_notifications.ids).to include(json["data"].first["id"].to_i)
+        expect(@comparable_notifications.pluck(:id)).to include(json["data"].first["id"].to_i)
         expect(json["data"].first["type"]).to eq("notifications")
-        expect(@comparable_notifications.ids).to include(json["data"].second["id"].to_i)
+        expect(@comparable_notifications.pluck(:id)).to include(json["data"].second["id"].to_i)
         expect(json["data"].second["type"]).to eq("notifications")
         
         actual = json["data"].first
@@ -104,7 +103,8 @@ RSpec.describe "Notifications", type: :request do
         get "/v1/all_notifications", :headers => @auth_headers
         json = JSON.parse(response.body)
         expect(response).to have_http_status(200)
-        viewed_array = @comparable_notifications.pluck(:viewed)
+        # Refresh viewed_array to confirm change from false to true.
+        viewed_array = Notification.find(@comparable_notifications.pluck(:id)).pluck(:viewed)
         actual_array = []
         json["data"].each {|record| actual_array  << record["attributes"]["viewed"]}
         expect(actual_array[0]).to eq(false) # First Response should be false.
@@ -134,9 +134,8 @@ RSpec.describe "Notifications", type: :request do
         @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
 
         @auth_headers = @member.create_new_auth_token
-        notification_member_ids = []
-        @comparable_children.each {|child| notification_member_ids << child.notifications.pluck(:member_id).first}
-        @comparable_notifications = Notification.where(member_id: @comparable_children)
+        @comparable_notifications = []
+        @comparable_children.each {|child| @comparable_notifications << child.notifications.first}
       end
       it 'should return an empty array notifications' do
         get "/v1/notifications", :headers => @auth_headers
@@ -154,9 +153,8 @@ RSpec.describe "Notifications", type: :request do
         @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
         
         @auth_headers = @member.create_new_auth_token
-        notification_member_ids = []
-        @comparable_children.each {|child| notification_member_ids << child.notifications.pluck(:member_id).first}
-        @comparable_notifications = Notification.where(member_id: @comparable_children)
+        @comparable_notifications = []
+        @comparable_children.each {|child| @comparable_notifications << child.notifications.first}
         @comparable_notifications.last.update_attributes(viewed: true)
       end
       it 'should return an empty array notifications' do
@@ -195,7 +193,8 @@ RSpec.describe "Notifications", type: :request do
         @comparable = FactoryBot.create(:post, family_id: @family.id, member_id: @member.id)
         logout_auth(@member) # @member = nil
         @comparable_children = FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: @commenter.id)
-        @comparable_notifications = Notification.where(member_id: @comparable_children)
+        @comparable_notifications = []
+        @comparable_children.each {|child| @comparable_notifications << child.notifications.first}
         @comparable_notifications.last.update_attributes(viewed: true)
       end
       it 'should return an empty array notifications' do
