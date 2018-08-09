@@ -424,7 +424,7 @@ RSpec.describe "Member API", type: :request do
         }
       }
     end
-    context "GET /members Members#update" do
+    context "PUT-PATCH /members Members#update" do
       it "able to #put update on another family member's profile" do
         put "/v1/members/#{@second_member.id}", :params => @update_put_request_params, :headers => @auth_headers
         expected = @update_put_request_params[:member][:attributes]
@@ -456,13 +456,12 @@ RSpec.describe "Member API", type: :request do
         expect(actual["attributes"]["addresses"]).to eq(expected[:addresses])
       end
     end
-    context "GET /members Members#destroy" do
+    context "DELETE /members Members#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
       it "can sucessfully delete a member" do
         @delete_request_params = {:member => {:id => @second_member.id }}
-
         delete "/v1/members/#{@second_member.id}", :params => @delete_request_params, :headers => @auth_headers
         expect(response).to have_http_status(204)
         expect(FamilyMember.find_by(member_id: @second_member.id)).to eq(nil)
@@ -506,7 +505,7 @@ RSpec.describe "Member API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /members Members#update" do
+    context "PUT-PATCH /members Members#update" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -554,7 +553,7 @@ RSpec.describe "Member API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /members Members#destroy" do
+    context "DELETE /members Members#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -584,7 +583,7 @@ RSpec.describe "Member API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "PUT - PATCH /members Members#update" do
+    context "PUT-PATCH /members Members#update" do
       it "#put returns a 401 error saying they are not authenticated" do
         put "/v1/members/#{@comparable.id}"
         expect(response).to have_http_status(401)
@@ -594,7 +593,7 @@ RSpec.describe "Member API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /members Members#destroy" do
+    context "DELETE /members Members#destroy" do
       it "returns a 401 error saying they are not authenticated" do
         delete "/v1/members/#{@comparable.id}"
         expect(response).to have_http_status(401)
