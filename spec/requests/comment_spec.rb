@@ -546,7 +546,7 @@ RSpec.describe "Comment API", type: :request do
     context "GET /comments Comments#show" do
       before do
         login_auth(@unauthorized_member) # @member = @unauthorized_member 
-        @comparable = FactoryBot.create(:post_with_children, family_id: @authorized_member_family_id, member_id: @authorized_member.id).comments.first
+        @comparable = FactoryBot.create(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @authorized_member.id)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
