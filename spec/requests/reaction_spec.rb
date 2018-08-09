@@ -194,7 +194,7 @@ RSpec.describe "Reaction API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /reactions Reactions#destroy" do
+    context "DELETE /reactions Reactions#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -272,7 +272,7 @@ RSpec.describe "Reaction API", type: :request do
         expect(response).to have_http_status(200)
       end
     end
-    context "GET /reactions Reactions#create" do
+    context "POST /reactions Reactions#create" do
       before do
         login_auth(@unauthorized_member) # @member = @unauthorized_member 
         @comparable = FactoryBot.build(:reaction, interaction_type: @subject.class.to_s, interaction_id: @subject.id, member_id: @member.id)
@@ -295,7 +295,7 @@ RSpec.describe "Reaction API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /reactions Reactions#destroy" do
+    context "DELETE /reactions Reactions#destroy" do
       before do
         login_auth(@unauthorized_member) # @member = @unauthorized_member 
       end
@@ -326,7 +326,7 @@ RSpec.describe "Reaction API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /reactions Reactions#create" do
+    context "POST /reactions Reactions#create" do
       it "returns a 401 error saying they are not authenticated" do
         comparable_for_create = FactoryBot.build(:reaction, interaction_type: @subject.class.to_s, interaction_id: @subject.id, member_id: nil)
         @create_request_params = {
@@ -343,7 +343,7 @@ RSpec.describe "Reaction API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /reactions Reactions#destroy" do
+    context "DELETE /reactions Reactions#destroy" do
       it "returns a 401 error saying they are not authenticated" do
         @comparable = FactoryBot.create(:reaction, interaction_type: @subject.class.to_s, interaction_id: @subject.id, member_id: @authorized_member.id )
         @delete_request_params = {:id => @comparable.id }
