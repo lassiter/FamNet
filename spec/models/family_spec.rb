@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 RSpec.describe Family, type: :model do
-subject { described_class.new }
+  subject { described_class.new }
   describe "Associations" do
     it { should have_many(:family_members) }
     it { should have_many(:members) }
