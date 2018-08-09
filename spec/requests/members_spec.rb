@@ -172,6 +172,7 @@ RSpec.describe "Member API", type: :request do
       end
       context ' :: Includes :: ' do
         xit 'and it shows the included Recipes' do
+          # trouble with includes via ams
           FactoryBot.create_list(:recipe, 5, member_id: @member.id)
           # currently having trouble getting optional includes
           @include_params = {:include => ["recipes"]}
@@ -192,6 +193,7 @@ RSpec.describe "Member API", type: :request do
         end
 
         xit 'and it shows the included EventRsvps and it\'s Event' do
+          # trouble with includes via ams
           # Only RSVP'd Events
           @include_params = {:include => ["event-rsvps"]}
           get "/v1/members/#{@comparable.id}", :params => @include_params, :headers => @auth_headers

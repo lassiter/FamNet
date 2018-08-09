@@ -30,9 +30,11 @@ class Member < ActiveRecord::Base
   validate :validates_hash_columns
 
   def validates_hash_columns
-    errors.add(:contacts, :invalid) unless contacts.slice(-1) == "}"
-    errors.add(:contacts, :invalid) unless contacts.slice(0) == "{"
-    errors.add(:addresses, :invalid) unless addresses.slice(-1) == "}"
-    errors.add(:addresses, :invalid) unless addresses.slice(0) == "{"
-  end
+    unless contacts.is_a?(Hash) || contacts == "{}"
+      errors.add(:contacts, :invalid)
+    end
+    unless addresses.is_a?(Hash) || addresses == "{}"
+      errors.add(:addresses, :invalid)
+    end
+  end # validates_hash_columns
 end
