@@ -128,7 +128,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_record).to include("member")
       end
     end
-    context "GET /recipes Recipes#create" do
+    context "POST /recipes Recipes#create" do
       before(:each) do
         create_tags_list = [
           {"title": "; DROP TABLE RECIPES; --"},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
@@ -320,7 +320,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_record).to include("member")
       end
     end
-    context "GET /recipes Recipes#update" do
+    context "PUT-PATCH /recipes Recipes#update" do
       before(:each) do
         @comparable = FactoryBot.create(:recipe, member_id: @member.id)
         @recipe = FactoryBot.build(:recipe, member_id: @member.id)
@@ -395,7 +395,7 @@ RSpec.describe "Recipes", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /recipes Recipes#destroy" do
+    context "DELETE /recipes Recipes#destroy" do
       before(:each) do
         @comparable = FactoryBot.create(:recipe, member_id: @member.id)
         @auth_headers = @member.create_new_auth_token
@@ -576,7 +576,7 @@ RSpec.describe "Recipes", type: :request do
     before(:each) do
       @auth_headers = @member.create_new_auth_token
     end
-    context "GET /recipes Recipes#update" do
+    context "PUT-PATCH /recipes Recipes#update" do
       before(:each) do
         @comparable = FactoryBot.create(:recipe, member_id: @second_member.id)
         @recipe = FactoryBot.build(:recipe, member_id: @member.id)
@@ -608,7 +608,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_record["ingredients-list"]).to eq(expected_record[:ingredients_list])
       end
     end
-    context "GET /recipes Recipes#destroy" do
+    context "DELETE /recipes Recipes#destroy" do
       before(:each) do
         @comparable = FactoryBot.create(:recipe, member_id: @second_member.id)
         @auth_headers = @member.create_new_auth_token
@@ -675,7 +675,7 @@ RSpec.describe "Recipes", type: :request do
         expect(json.count).to eq(1)
       end
     end
-    context "GET /recipes Recipes#update" do
+    context "PUT-PATCH /recipes Recipes#update" do
       before(:each) do
         @comparable = @family_recipe.first
         @recipe = FactoryBot.build(:recipe, member_id: @member.id)
@@ -695,7 +695,7 @@ RSpec.describe "Recipes", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /recipes Recipes#destroy" do
+    context "DELETE /recipes Recipes#destroy" do
       before(:each) do
         @comparable = @family_recipe.first
         @auth_headers = @member.create_new_auth_token
@@ -723,13 +723,13 @@ RSpec.describe "Recipes", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /recipes Recipes#create" do
+    context "POST /recipes Recipes#create" do
       it "returns a 401 error saying they are not authenticated" do
         get '/v1/recipes'
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /recipes Recipes#update" do
+    context "PUT-PATCH /recipes Recipes#update" do
       it "#put returns a 401 error saying they are not authenticated" do
         get '/v1/recipes'
         expect(response).to have_http_status(401)
@@ -739,7 +739,7 @@ RSpec.describe "Recipes", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /recipes Recipes#destroy" do
+    context "DELETE /recipes Recipes#destroy" do
       it "returns a 401 error saying they are not authenticated" do
         get '/v1/recipes'
         expect(response).to have_http_status(401)
