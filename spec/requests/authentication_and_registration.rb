@@ -104,13 +104,6 @@ RSpec.describe "Authentication API", type: :request do
       end
     end
   end
-  # context 'Anon Access' do
-  #   it 'accesses unprotected' do
-  #   end
-  #   it 'fails to access protected resources' do
-      
-  #   end
-  # end
   context 'Sign in' do
     before do
       post '/v1/auth/sign_in', { params: { "email" => valid_member.email, "password" => valid_member.password } }
@@ -121,12 +114,6 @@ RSpec.describe "Authentication API", type: :request do
         post '/v1/auth/sign_in', { params: { "email" => valid_member.email, "password" => valid_member.password } }
         expect(response).to have_http_status(200)
       end
-      xit 'generates access token' do
-      end
-      xit 'grants access to resource' do
-      end
-      xit 'grants access to resource multiple times' do
-      end
       it 'allows members to logout' do
         delete '/v1/auth/sign_out', { headers: { "uid" => valid_member.email, "client" => @header["client"], "access-token" => @header["access-token"] } }
         expect(response).to have_http_status(200)
@@ -135,7 +122,6 @@ RSpec.describe "Authentication API", type: :request do
     context 'invalid password' do
       it 'rejects credentials' do
         post '/v1/auth/sign_in', { params: { "email" => valid_member.email, "password" => "foobar" } }
-
         expect(JSON.parse(response.body)["errors"]).to include("Invalid login credentials. Please try again.")
         expect(response).to have_http_status(401)
       end
