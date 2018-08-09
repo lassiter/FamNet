@@ -307,7 +307,7 @@ RSpec.describe "Comment API", type: :request do
       before do
         @second_member = FactoryBot.create(:family_member, family_id: @family.id, authorized_at: DateTime.now).member
       end
-      context "GET /comments Comments#update :: Member 2 => Member 1 ::" do
+      context "PUT-PATCH /comments Comments#update :: Member 2 => Member 1 ::" do
         before(:each) do
           @auth_headers = @member.create_new_auth_token
           @update_subject = FactoryBot.create(:"#{@subject.class.to_s.downcase}", family_id: @member_family_id, member_id: @second_member.id)
@@ -427,7 +427,7 @@ RSpec.describe "Comment API", type: :request do
         }
       }
     end
-    context "GET /comments Comments#update" do
+    context "PUT-PATCH /comments Comments#update" do
       it "able to #put update on another family member's comment" do
         put "/v1/comments/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         expected = @update_put_request_params[:comment][:attributes].as_json
@@ -461,7 +461,7 @@ RSpec.describe "Comment API", type: :request do
         expect(actual_attributes["member-id"]).to eq(@comparable.member_id)
       end
     end
-    context "GET /comments Comments#destroy" do
+    context "DELETE /comments Comments#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -556,7 +556,7 @@ RSpec.describe "Comment API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /comments Comments#create" do
+    context "POST /comments Comments#create" do
       before do
         login_auth(@unauthorized_member) # @member = @unauthorized_member 
         @comparable = FactoryBot.build(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @member.id)
@@ -579,7 +579,7 @@ RSpec.describe "Comment API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /comments Comments#update" do
+    context "PUT-PATCH /comments Comments#update" do
       before do
         login_auth(@unauthorized_member) # @member = @unauthorized_member 
         @comparable = FactoryBot.create(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @authorized_member.id)
@@ -619,7 +619,7 @@ RSpec.describe "Comment API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /comments Comments#destroy" do
+    context "DELETE /comments Comments#destroy" do
       before do
         login_auth(@unauthorized_member) # @member = @unauthorized_member 
       end
@@ -656,7 +656,7 @@ RSpec.describe "Comment API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /comments Comments#create" do
+    context "POST /comments Comments#create" do
       it "returns a 401 error saying they are not authenticated" do
         comparable_for_create = FactoryBot.build(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: nil)
         @create_request_params = {
@@ -673,7 +673,7 @@ RSpec.describe "Comment API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /comments Comments#update" do
+    context "PUT-PATCH /comments Comments#update" do
       before do
         @comparable = FactoryBot.create(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @authorized_member.id )
         update = FactoryBot.build(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: nil)
@@ -708,7 +708,7 @@ RSpec.describe "Comment API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /comments Comments#destroy" do
+    context "DELETE /comments Comments#destroy" do
       it "returns a 401 error saying they are not authenticated" do
         @comparable = FactoryBot.create(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @authorized_member.id )
         @delete_request_params = {:id => @comparable.id }
