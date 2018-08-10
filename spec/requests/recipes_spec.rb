@@ -14,8 +14,8 @@ RSpec.describe "Recipes", type: :request do
       @comparables_array = []
         5.times do
           # Starting to build a recipe
-          create_tags_list = [
-            {"title": "foobar", "description": Faker::Lorem.sentence},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
+          @create_tags_list = [
+            {"title": "tasty", "description": Faker::Lorem.sentence},{"title": "vegan", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
           ]
           ingredient_list = []
           rand(6..9).times do
@@ -48,13 +48,22 @@ RSpec.describe "Recipes", type: :request do
           end
           steps = {"preparation" => prep_step, "cooking" => cooking_step, "post_cooking" => post_step}
           # Formatting Recipe
-          new_recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
+          @new_recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
           @subject_build = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
           # Saving Recipe
-          if new_recipe.save
+          if @new_recipe.save
             # If sucessful create shovel recipe id to recipe list array
-            @comparables_array << new_recipe.id
-            FactoryBot.create(:reaction, member_id: [@second_member.id, @member.id].sample, interaction_type: "Recipe", interaction_id: new_recipe.id)
+            @comparables_array << @new_recipe.id
+            @create_tags_list.each do |tag|
+              tag_obj = FactoryBot.create(:tag, title: tag[:title], description: tag[:description] )
+              FactoryBot.create(:recipe_tag, tag_id: tag_obj.id, recipe_id: @new_recipe.id )
+            end
+            @new_recipe.ingredients_list.each do |ingredient|
+              ingredient_obj = FactoryBot.create(:ingredient, title: ingredient )
+              FactoryBot.create(:recipe_ingredient, ingredient_id: ingredient_obj.id, recipe_id: @new_recipe.id )
+            end
+            FactoryBot.create(:reaction, member_id: [@second_member.id, @member.id].sample, interaction_type: "Recipe", interaction_id: @new_recipe.id)
+
           end
         end
         # Recipe List for Comparsions
@@ -173,7 +182,6 @@ RSpec.describe "Recipes", type: :request do
         expect(response).to have_http_status(200)
         expect(actual["type"]).to eq("recipe")
         expect(actual).to include("id")
-
       end
       it 'and it returns the json for the newly created post following schema' do
         post '/v1/recipes', :params => {recipe: @create_request_params}, :headers => @auth_headers
@@ -215,56 +223,6 @@ RSpec.describe "Recipes", type: :request do
       end
     end
     context "GET /recipes Recipes#show" do
-      before do
-        create_tags_list = [
-          {"title": "foobar"},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
-        ]
-        ingredient_list = []
-        rand(6..9).times do
-          item = Faker::Food.ingredient
-          ingredient_list << item if !item.nil?
-        end
-        prep_step = []
-        cooking_step = []
-        post_step = []
-
-        6.times do |i|
-          prep = ["foobar","stir", "masage", "whip",]
-          cooking = ["bake", "saute", "grill"]
-          post = ["combine", "toss"]
-          # Prep
-          if i <= 1
-            prep_step_task = "Take #{ingredient_list[i]} and #{prep[i]} it till it's you think it's ready."
-            prep_step_array_item = {:instruction => prep_step_task, :time_length => "#{rand(1..90)} minutes", :ingredients => [ingredient_list[i]]}
-            prep_step.push(prep_step_array_item)
-          elsif i >= 2 && i <= 4
-            num = rand(0..1)
-            cooking_step_task = "Take #{ingredient_list[i]} and combine it with #{ingredient_list[num]} and #{cooking[i]} it till it's done."
-            cooking_step_array_item = {:instruction => cooking_step_task, :time_length => "#{rand(1..90)} minutes", :ingredients => [ingredient_list[i], ingredient_list[num]]}
-            cooking_step.push(cooking_step_array_item)
-          else
-            post_step_task = "Take #{ingredient_list.slice(0..1).join(', ')} and #{ingredient_list[2]} then #{post.sample} it with #{ingredient_list[-1]}."
-            post_step_array_item = {:instruction => post_step_task, :time_length => "#{rand(1..90)} minutes", :ingredients => ingredient_list[0..2].push(ingredient_list[-1])}
-            post_step.push(post_step_array_item)
-          end
-        end
-        # steps = {"preparation" => prep_step, "cooking" => cooking_step, "post_cooking" => post_step}
-
-        # @recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
-        # @create_request_params = {
-        #     "title": @recipe.title,
-        #     "description": @recipe.description,
-        #     "member_id": @recipe.member_id,
-        #     "ingredients_list": @recipe.ingredients_list, 
-        #     "steps": steps, 
-        #     "tags_list": create_tags_list
-        #   }
-        # post '/v1/recipes', :params => {recipe: @create_request_params}, :headers => @member.create_new_auth_token
-        # @comparable = Recipe.find(JSON.parse(response.body)["data"]["id"].to_i)
-        # @family.family_members.pluck(:member_id).each do |id|
-        #   FactoryBot.create(:reaction, member_id: id, interaction_type: "Recipe", interaction_id: @comparable.id)
-        # end
-      end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -408,70 +366,21 @@ RSpec.describe "Recipes", type: :request do
       end
     end
     context "GET /recipes Recipes#search" do
-      before do
-        comparables_array = []
-        5.times do
-          # Starting to build a recipe
-          create_tags_list = [
-            {"title": "foobar"},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
-          ]
-          ingredient_list = []
-          rand(6..9).times do
-            item = Faker::Food.ingredient
-            ingredient_list << item if !item.nil?
-          end
-          prep_step = []
-          cooking_step = []
-          post_step = []
-          # Building the steps of the test recipe
-          6.times do |i|
-            prep = ["foobar","stir", "masage", "whip",]
-            cooking = ["bake", "saute", "grill"]
-            post = ["combine", "toss"]
-            # Prep
-            if i <= 1
-              prep_step_task = "Take #{ingredient_list[i]} and #{prep[i]} it till it's you think it's ready."
-              prep_step_array_item = {:instruction => prep_step_task, :time_length => "#{rand(1..90)} minutes", :ingredients => [ingredient_list[i]]}
-              prep_step.push(prep_step_array_item)
-            elsif i >= 2 && i <= 4
-              num = rand(0..1)
-              cooking_step_task = "Take #{ingredient_list[i]} and combine it with #{ingredient_list[num]} and #{cooking[i]} it till it's done."
-              cooking_step_array_item = {:instruction => cooking_step_task, :time_length => "#{rand(1..90)} minutes", :ingredients => [ingredient_list[i], ingredient_list[num]]}
-              cooking_step.push(cooking_step_array_item)
-            else
-              post_step_task = "Take #{ingredient_list.slice(0..1).join(', ')} and #{ingredient_list[2]} then #{post.sample} it with #{ingredient_list[-1]}."
-              post_step_array_item = {:instruction => post_step_task, :time_length => "#{rand(1..90)} minutes", :ingredients => ingredient_list[0..2].push(ingredient_list[-1])}
-              post_step.push(post_step_array_item)
-            end
-          end
-          steps = {"preparation" => prep_step, "cooking" => cooking_step, "post_cooking" => post_step}
-          # Formatting Recipe
-          new_recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
-          # Saving Recipe
-          if new_recipe.save
-            # If sucessful create shovel recipe id to recipe list array
-            @comparables_array << new_recipe.id
-            FactoryBot.create(:reaction, member_id: [@second_member.id, @member.id].sample, interaction_type: "Recipe", interaction_id: new_recipe.id)
-          end
-        end
-        # Recipe List for Comparsions
-        @comparables_for_search = Recipe.where(id: comparables_array)
-      end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
       it "200 request" do
-        query_value = @comparables_for_search.first.tags_list.first
+        query_value = @comparables.first.tags_list.first
         get '/v1/recipes/search', params: {filter: {:type => :tag, :query => query_value}}, headers: @auth_headers
         expect(response).to have_http_status(200)
       end
       it "returns unprocessible entity if type doesn't match" do
-        query_value = @comparables_for_search.first.tags_list.first
+        query_value = @comparables.first.tags_list.first
         get '/v1/recipes/search', params: {filter: {:type => :name, :query => query_value}}, headers: @auth_headers
         expect(response).to have_http_status(:bad_request)
       end
       it "can return a recipe by tag title match" do
-        query_value = @comparables_for_search.second.tags_list.first
+        query_value = @comparables.second.tags_list.first
         get '/v1/recipes/search', params: {filter: {:type => :tag, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body)["data"]
         actual_tag_list = json.first["attributes"]["tags-list"]
@@ -487,7 +396,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_tag_list).to include(query_value)
       end
       it "can return a recipe by tag description partial" do
-        selected_tag = @comparables_for_search.second.tags.last
+        selected_tag = @comparables.second.tags.order("id ASC").first
         query_value = selected_tag.description.split(" ")[1..3].join(" ")
         get '/v1/recipes/search', params: {filter: {:type => :tag, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body)["data"]
@@ -509,7 +418,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_tag_list).to include(selected_tag.title)
       end
       it "can return a recipe by recipe title match" do
-        query_value = @comparables_for_search.third.title
+        query_value = @comparables.third.title
         get '/v1/recipes/search', params: {filter: {:type => :recipe, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body)["data"]
         actual_title = json.first["attributes"]["title"]
@@ -517,7 +426,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_title).to eq(query_value)
       end
       it "can return a recipe by recipe description partial" do
-        selected_recipe = @comparables_for_search.third
+        selected_recipe = @comparables.third
         query_value = selected_recipe.description.split(" ")[1..3].join(" ")
         get '/v1/recipes/search', params: {filter: {:type => :recipe, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body)["data"]
@@ -527,7 +436,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_description).to include(query_value)
       end
       it "can return a recipe by ingredient title match" do
-        query_value = @comparables_for_search.fourth.ingredients_list.first
+        query_value = @comparables.fourth.ingredients_list.first
         get '/v1/recipes/search', params: {filter: {:type => :ingredient, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body)["data"]
         actual_ingredient_list = json.first["attributes"]["ingredients-list"]
