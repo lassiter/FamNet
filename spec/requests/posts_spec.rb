@@ -89,9 +89,8 @@ RSpec.describe "Post API", type: :request do
         get "/v1/posts/#{@comparable.id}", :headers => @auth_headers
         json = JSON.parse(response.body)
         actual = json["data"]["relationships"]["comments"]["data"] # array of comments
-
         actual_comments = actual.first # first json comment
-        expected_comments = @comparable.comments.order("id ASC").first #first active record comment
+        expected_comments = @comparable.comments.order("id DESC").first #first active record comment
         expect(actual.count).to eq(@comparable.comments.count)
         expect(actual_comments["id"].to_i).to eq(expected_comments.id)
         expect(actual_comments["type"].downcase).to eq(expected_comments.class.to_s.downcase)

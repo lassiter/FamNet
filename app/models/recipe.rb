@@ -15,11 +15,4 @@ class Recipe < ApplicationRecord
   validates :ingredients_list, presence: true
   validates :tags_list, presence: true
   validates :member_id, presence: true
-
-  # after_create :create_join_tables
-
-  # def create_join_tables
-  #   binding.pry
-    
-  # end
 end

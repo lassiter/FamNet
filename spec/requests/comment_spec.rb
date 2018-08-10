@@ -538,7 +538,7 @@ RSpec.describe "Comment API", type: :request do
         actual_ids = []
         actual.pluck("id").each {|id| actual_ids << id.to_i}
         comparable_ids = @authorized_comparable.pluck(:id) + @unauthorized_comparable.pluck(:id)
-        expect(actual_ids).to eq(comparable_ids.reverse)
+        expect(actual_ids.sort).to eq(comparable_ids.sort)
         expect(actual.count).to eq(4)
         expect(response).to have_http_status(200)
       end
