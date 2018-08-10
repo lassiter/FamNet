@@ -1,7 +1,6 @@
 class API::V1::TagsController < ApplicationController
   def create
     @tag = Tags.new(tag_params)
-
     if @tag.save
       render json: @tag
     else

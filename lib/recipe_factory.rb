@@ -1,11 +1,11 @@
-class API::V1::RecipeFactoryController < ApplicationController
+class RecipeFactory
   def initialize(recipe_params)
-    @title = recipe_params["title"].to_s                                              # string
+    @title = recipe_params["title"].to_s
 
-    @description = recipe_params["description"].to_s      
+    @description = recipe_params["description"].to_s
     
     @ingredients_object_array = []
-    @ingredients = recipe_params["ingredients_list"].to_a.each do |ingredient|             # array
+    @ingredients = recipe_params["ingredients_list"].to_a.each do |ingredient|
       i = Ingredient.find_or_create_by(title: ingredient)
 
       @ingredients_object_array << i
@@ -25,7 +25,7 @@ class API::V1::RecipeFactoryController < ApplicationController
     end
 
     @steps = recipe_params["steps"] # json
-    
+
     @member = Member.find(recipe_params["member_id"].to_i) # object
 
   end
@@ -38,22 +38,19 @@ class API::V1::RecipeFactoryController < ApplicationController
       steps: @steps.to_h,
       attachment: nil,
       ingredients_list: @ingredients_object_array.map {|ingredient| ingredient.title},
-      tags_list: @tags_object_array.map {|tag| tag.title},
-      ingredients: @ingredients_object_array,
-      tags: @tags_object_array
+      tags_list: @tags_object_array.map {|tag| tag.title}
     })
   end
 
-  # def factory_callback(id)
-    
-  #   @tags_object_array.each do |tag|
-  #     RecipeTags.create(tag_id: tag.id, recipe_id: id)
-  #   end
+  def factory_callback(id)
+    @tags_object_array.each do |tag|
+      RecipeTag.create(tag_id: tag.id, recipe_id: id)
+    end
 
-  #   @ingredient_object_array.each do |ingredient|
-  #     RecipeIngredient.create(ingredient_id: ingredient.id, recipe_id: id)
-  #   end
+    @ingredients_object_array.each do |ingredient|
+      RecipeIngredient.create(ingredient_id: ingredient.id, recipe_id: id)
+    end
 
-  # end
+  end
 
 end

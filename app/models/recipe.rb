@@ -16,7 +16,10 @@ class Recipe < ApplicationRecord
   validates :tags_list, presence: true
   validates :member_id, presence: true
 
-  def mentioned_members
-    MentionParser.new(body).members
-  end
+  # after_create :create_join_tables
+
+  # def create_join_tables
+  #   binding.pry
+    
+  # end
 end

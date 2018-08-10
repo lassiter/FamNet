@@ -50,11 +50,11 @@ class API::V1::RecipesController < ApplicationController
 
   def create
     begin
-      # pre authorize?
-      @recipe = API::V1::RecipeFactoryController.new(recipe_params).result
-      
+      @recipe = RecipeFactory.new(recipe_params).result
+      authorize @recipe
       if @recipe.save
-        # @recipe.factory_callback(@recipe.id)
+        # Callback to have access to @recipe.id to create join_tables.
+        RecipeFactory.new(recipe_params).factory_callback(@recipe.id)
         render json: @recipe, serializer: RecipeSerializer, adapter: :json_api
       else
         render json: { errors: @recipe.errors.full_messages }, status: :unprocessable_entity
@@ -116,12 +116,5 @@ class API::V1::RecipesController < ApplicationController
     end
     def search_params
       params.require(:filter).permit(:query, :type)
-    end
-    def next_available_id
-      if Recipe.count == 0
-        id = 1
-      else
-        id = Recipe.maximum(:id).next
-      end
     end
 end

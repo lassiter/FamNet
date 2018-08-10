@@ -9,14 +9,13 @@ RSpec.describe "Recipes", type: :request do
       second_family_member = FactoryBot.create(:family_member, family_id: @family.id, authorized_at: DateTime.now)
       @second_member = second_family_member.member
       @member = family_member.member
-    end
-    context "GET /recipes Recipes#index" do
-      before do
-        recipe_list_array = []
+
+      # Recipe Formatter
+      @comparables_array = []
         5.times do
           # Starting to build a recipe
           create_tags_list = [
-            {"title": "; DROP TABLE RECIPES; --"},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
+            {"title": "foobar", "description": Faker::Lorem.sentence},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
           ]
           ingredient_list = []
           rand(6..9).times do
@@ -28,7 +27,7 @@ RSpec.describe "Recipes", type: :request do
           post_step = []
           # Building the steps of the test recipe
           6.times do |i|
-            prep = ["; DROP TABLE RECIPES; --","stir", "masage", "whip",]
+            prep = ["stir", "masage", "whip",]
             cooking = ["bake", "saute", "grill"]
             post = ["combine", "toss"]
             # Prep
@@ -49,28 +48,21 @@ RSpec.describe "Recipes", type: :request do
           end
           steps = {"preparation" => prep_step, "cooking" => cooking_step, "post_cooking" => post_step}
           # Formatting Recipe
-          @recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
-          recipe = {
-              "title": @recipe.title,
-              "description": @recipe.description,
-              "member_id": @recipe.member_id,
-              "ingredients_list": @recipe.ingredients_list, 
-              "steps": steps, 
-              "tags_list": create_tags_list
-            }
-          # Bypassing Recipe Controller Recipe Params for Factory
-          recipe_params = ActionController::Parameters.new(recipe).permit!
-          # Following Recipe#create for Creation via Factory
-          new_recipe = API::V1::RecipeFactoryController.new(recipe_params).result
+          new_recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
+          @subject_build = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
           # Saving Recipe
           if new_recipe.save
             # If sucessful create shovel recipe id to recipe list array
-            recipe_list_array << new_recipe.id
+            @comparables_array << new_recipe.id
             FactoryBot.create(:reaction, member_id: [@second_member.id, @member.id].sample, interaction_type: "Recipe", interaction_id: new_recipe.id)
           end
         end
         # Recipe List for Comparsions
-        @recipe_list = Recipe.where(id: recipe_list_array)
+        @comparables = Recipe.where(id: @comparables_array)
+        @comparable = @comparables.first
+    end
+    context "GET /recipes Recipes#index" do
+      before do
         login_auth(@member)
       end
       before(:each) do
@@ -81,9 +73,9 @@ RSpec.describe "Recipes", type: :request do
         get '/v1/recipes', :headers => @auth_headers
         json = JSON.parse(response.body)["data"]
         actual = json
-        expected = @recipe_list
+        expected = @comparables
         actual_record = json.first["attributes"]
-        expected_record = @recipe_list.first
+        expected_record = @comparables.first
         expect(response).to have_http_status(200)
 
         expect(actual_record["title"]).to eq(expected_record.title)
@@ -131,7 +123,7 @@ RSpec.describe "Recipes", type: :request do
     context "POST /recipes Recipes#create" do
       before(:each) do
         create_tags_list = [
-          {"title": "; DROP TABLE RECIPES; --"},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
+          {"title": "foobar"},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
         ]
         ingredient_list = []
         rand(6..9).times do
@@ -143,7 +135,7 @@ RSpec.describe "Recipes", type: :request do
         post_step = []
 
         6.times do |i|
-          prep = ["; DROP TABLE RECIPES; --","stir", "masage", "whip",]
+          prep = ["foobar","stir", "masage", "whip",]
           cooking = ["bake", "saute", "grill"]
           post = ["combine", "toss"]
           # Prep
@@ -193,7 +185,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual["description"]).to eq(expected[:description])
         expect(actual["member-id"]).to eq(expected[:member_id])
         expect(actual["attachment"]).to eq(expected[:attachment])
-        expect(actual["tags-list"].first).to_not eq(expected[:tags_list].pluck(:title).first) # "; Drop Table Recipes;   " vs "; DROP TABLE RECIPES; --"
+        expect(actual["tags-list"].first).to_not eq(expected[:tags_list].pluck(:title).first) # "; Drop Table Recipes;   " vs "foobar"
         expect(actual["tags-list"].second_to_last.downcase).to eq(expected[:tags_list].pluck(:title).second_to_last.downcase)
         expect(actual["tags-list"].last.downcase).to eq(expected[:tags_list].pluck(:title).last.downcase)
         expect(actual["ingredients-list"]).to eq(expected[:ingredients_list])
@@ -225,7 +217,7 @@ RSpec.describe "Recipes", type: :request do
     context "GET /recipes Recipes#show" do
       before do
         create_tags_list = [
-          {"title": "; DROP TABLE RECIPES; --"},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
+          {"title": "foobar"},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
         ]
         ingredient_list = []
         rand(6..9).times do
@@ -237,7 +229,7 @@ RSpec.describe "Recipes", type: :request do
         post_step = []
 
         6.times do |i|
-          prep = ["; DROP TABLE RECIPES; --","stir", "masage", "whip",]
+          prep = ["foobar","stir", "masage", "whip",]
           cooking = ["bake", "saute", "grill"]
           post = ["combine", "toss"]
           # Prep
@@ -256,22 +248,22 @@ RSpec.describe "Recipes", type: :request do
             post_step.push(post_step_array_item)
           end
         end
-        steps = {"preparation" => prep_step, "cooking" => cooking_step, "post_cooking" => post_step}
+        # steps = {"preparation" => prep_step, "cooking" => cooking_step, "post_cooking" => post_step}
 
-        @recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
-        @create_request_params = {
-            "title": @recipe.title,
-            "description": @recipe.description,
-            "member_id": @recipe.member_id,
-            "ingredients_list": @recipe.ingredients_list, 
-            "steps": steps, 
-            "tags_list": create_tags_list
-          }
-        post '/v1/recipes', :params => {recipe: @create_request_params}, :headers => @member.create_new_auth_token
-        @comparable = Recipe.find(JSON.parse(response.body)["data"]["id"].to_i)
-        @family.family_members.pluck(:member_id).each do |id|
-          FactoryBot.create(:reaction, member_id: id, interaction_type: "Recipe", interaction_id: @comparable.id)
-        end
+        # @recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
+        # @create_request_params = {
+        #     "title": @recipe.title,
+        #     "description": @recipe.description,
+        #     "member_id": @recipe.member_id,
+        #     "ingredients_list": @recipe.ingredients_list, 
+        #     "steps": steps, 
+        #     "tags_list": create_tags_list
+        #   }
+        # post '/v1/recipes', :params => {recipe: @create_request_params}, :headers => @member.create_new_auth_token
+        # @comparable = Recipe.find(JSON.parse(response.body)["data"]["id"].to_i)
+        # @family.family_members.pluck(:member_id).each do |id|
+        #   FactoryBot.create(:reaction, member_id: id, interaction_type: "Recipe", interaction_id: @comparable.id)
+        # end
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -417,11 +409,11 @@ RSpec.describe "Recipes", type: :request do
     end
     context "GET /recipes Recipes#search" do
       before do
-        recipe_list_array = []
+        comparables_array = []
         5.times do
           # Starting to build a recipe
           create_tags_list = [
-            {"title": "; DROP TABLE RECIPES; --"},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
+            {"title": "foobar"},{"title": "foobaz", "description": Faker::Lorem.sentence},{"title": "italian", "description": "Cultural food deriving from italy", "mature": true}
           ]
           ingredient_list = []
           rand(6..9).times do
@@ -433,7 +425,7 @@ RSpec.describe "Recipes", type: :request do
           post_step = []
           # Building the steps of the test recipe
           6.times do |i|
-            prep = ["; DROP TABLE RECIPES; --","stir", "masage", "whip",]
+            prep = ["foobar","stir", "masage", "whip",]
             cooking = ["bake", "saute", "grill"]
             post = ["combine", "toss"]
             # Prep
@@ -454,43 +446,32 @@ RSpec.describe "Recipes", type: :request do
           end
           steps = {"preparation" => prep_step, "cooking" => cooking_step, "post_cooking" => post_step}
           # Formatting Recipe
-          @recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
-          recipe = {
-              "title": @recipe.title,
-              "description": @recipe.description,
-              "member_id": @recipe.member_id,
-              "ingredients_list": @recipe.ingredients_list, 
-              "steps": steps, 
-              "tags_list": create_tags_list
-            }
-          # Bypassing Recipe Controller Recipe Params for Factory
-          recipe_params = ActionController::Parameters.new(recipe).permit!
-          # Following Recipe#create for Creation via Factory
-          new_recipe = API::V1::RecipeFactoryController.new(recipe_params).result
+          new_recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
           # Saving Recipe
           if new_recipe.save
             # If sucessful create shovel recipe id to recipe list array
-            recipe_list_array << new_recipe.id
+            @comparables_array << new_recipe.id
+            FactoryBot.create(:reaction, member_id: [@second_member.id, @member.id].sample, interaction_type: "Recipe", interaction_id: new_recipe.id)
           end
         end
         # Recipe List for Comparsions
-        @recipe_list_for_search = Recipe.where(id: recipe_list_array)
+        @comparables_for_search = Recipe.where(id: comparables_array)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
       it "200 request" do
-        query_value = @recipe_list_for_search.first.tags_list.first
+        query_value = @comparables_for_search.first.tags_list.first
         get '/v1/recipes/search', params: {filter: {:type => :tag, :query => query_value}}, headers: @auth_headers
         expect(response).to have_http_status(200)
       end
       it "returns unprocessible entity if type doesn't match" do
-        query_value = @recipe_list_for_search.first.tags_list.first
+        query_value = @comparables_for_search.first.tags_list.first
         get '/v1/recipes/search', params: {filter: {:type => :name, :query => query_value}}, headers: @auth_headers
         expect(response).to have_http_status(:bad_request)
       end
       it "can return a recipe by tag title match" do
-        query_value = @recipe_list_for_search.second.tags_list.first
+        query_value = @comparables_for_search.second.tags_list.first
         get '/v1/recipes/search', params: {filter: {:type => :tag, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body)["data"]
         actual_tag_list = json.first["attributes"]["tags-list"]
@@ -506,7 +487,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_tag_list).to include(query_value)
       end
       it "can return a recipe by tag description partial" do
-        selected_tag = @recipe_list_for_search.second.tags.last
+        selected_tag = @comparables_for_search.second.tags.last
         query_value = selected_tag.description.split(" ")[1..3].join(" ")
         get '/v1/recipes/search', params: {filter: {:type => :tag, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body)["data"]
@@ -528,7 +509,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_tag_list).to include(selected_tag.title)
       end
       it "can return a recipe by recipe title match" do
-        query_value = @recipe_list_for_search.third.title
+        query_value = @comparables_for_search.third.title
         get '/v1/recipes/search', params: {filter: {:type => :recipe, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body)["data"]
         actual_title = json.first["attributes"]["title"]
@@ -536,7 +517,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_title).to eq(query_value)
       end
       it "can return a recipe by recipe description partial" do
-        selected_recipe = @recipe_list_for_search.third
+        selected_recipe = @comparables_for_search.third
         query_value = selected_recipe.description.split(" ")[1..3].join(" ")
         get '/v1/recipes/search', params: {filter: {:type => :recipe, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body)["data"]
@@ -546,7 +527,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_description).to include(query_value)
       end
       it "can return a recipe by ingredient title match" do
-        query_value = @recipe_list_for_search.fourth.ingredients_list.first
+        query_value = @comparables_for_search.fourth.ingredients_list.first
         get '/v1/recipes/search', params: {filter: {:type => :ingredient, :query => query_value}}, headers: @auth_headers
         json = JSON.parse(response.body)["data"]
         actual_ingredient_list = json.first["attributes"]["ingredients-list"]
