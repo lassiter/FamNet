@@ -59,7 +59,9 @@ RSpec.describe "Post API", type: :request do
     end
     context "GET /posts/:id Posts#show" do
       before do
-        @comparable = FactoryBot.create(:post_with_children, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id )
+        @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id )
+        FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)
+        FactoryBot.create(:reaction, interaction_type: "Post", interaction_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -89,10 +91,8 @@ RSpec.describe "Post API", type: :request do
         actual = json["data"]["relationships"]["comments"]["data"] # array of comments
 
         actual_comments = actual.first # first json comment
-        expected_comments = @comparable.comments.first #first active record comment
-
+        expected_comments = @comparable.comments.order("id ASC").first #first active record comment
         expect(actual.count).to eq(@comparable.comments.count)
-
         expect(actual_comments["id"].to_i).to eq(expected_comments.id)
         expect(actual_comments["type"].downcase).to eq(expected_comments.class.to_s.downcase)
       end
@@ -497,7 +497,7 @@ RSpec.describe "Post API", type: :request do
     end
     context "GET /posts Posts#index" do
       before do
-        FactoryBot.create_list(:post_with_children, 5, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
+        FactoryBot.create_list(:post, 5, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
         @comparable = Post.where(family_id: @authorized_member_family_id) # todo: replace with pundit
       end
       before(:each) do
@@ -525,8 +525,8 @@ RSpec.describe "Post API", type: :request do
     end
     context "GET /posts Posts#show" do
       before do
-        @comparable = FactoryBot.create(:post_with_children, family_id: @authorized_member_family_id, member_id: @authorized_member.id) # todo: replace with pundit
-        FactoryBot.create(:post_with_children, family_id: @unauthorized_member_family_id, member_id: @member.id)
+        @comparable = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id) # todo: replace with pundit
+        FactoryBot.create(:post, family_id: @unauthorized_member_family_id, member_id: @member.id)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -622,7 +622,7 @@ RSpec.describe "Post API", type: :request do
       @authorized_member = authorized_member.member
 
       @member = nil
-      FactoryBot.create_list(:post_with_children, 2, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
+      FactoryBot.create_list(:post, 2, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
       @comparable = Post.where(family_id: @authorized_member_family_id) # todo: replace with pundit
     end
     context "GET /posts Posts#index" do
