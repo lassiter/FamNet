@@ -2,6 +2,7 @@ Rails.application.routes.draw do
 
   namespace :api, :path => "" do
     namespace :v1 do
+      resources :tags, only: [:index, :create, :destroy]
       resources :reactions, only: [:create, :destroy]
       get 'notifications', action: :unviewed, controller: 'notifications'
       get 'all_notifications', action: :all, controller: 'notifications'
