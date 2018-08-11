@@ -1,28 +1,29 @@
 class API::V1::EventsController < ApplicationController
-  # before_action :authenticate_api_v1_member!
+  before_action :authenticate_api_v1_member!
   def index
-    if params[:filter][:scope] == "all"
-      @events = Event.all
-      # @events = policy_scope(Event)
-      render json: @events
-    else
-      begin
-        @events = Event.where("event_start > ?", Date.today)
-        # @events = policy_scope(Event.where("event_start > ?", Date.today))
-        render json: @events
-      rescue Pundit::NotDefinedError # mentor
-        render json: {}, status: :no_content
+    begin
+      unless params[:filter].present? && params[:filter][:scope] == "all"
+        @events = policy_scope(Event).all
+        render json: @events, each_serializer: EventSerializer, adapter: :json_api
+      else
+        begin
+          @events = Event.where("event_start > ?", Date.today)
+          # @events = policy_scope(Event.where("event_start > ?", Date.today))
+          render json: @events
+        rescue Pundit::NotDefinedError # mentor
+          render json: {}, status: :no_content
+        end
       end
     end
   end
-  
+
   def show
     begin
       @event = Event.find(params[:id])
       if @event.event_rsvps.any?
-        render json: {"event" => @event, "event_rsvps"=> @event.event_rsvps}, status: :ok
+        render json: @event, serializer: EventSerializer, include: [:'event_rsvps'], adapter: :json_api, status: :ok
       else
-        render json: @event, status: :ok
+        render json: @event, serializer: EventSerializer, adapter: :json_api
       end
     rescue ActiveRecord::RecordNotFound
       render :json => {}, :status => :not_found
@@ -30,11 +31,12 @@ class API::V1::EventsController < ApplicationController
   end
 
   def create
-    @event = API::V1::EventFactoryController.new(event_params).result
-
+    @event = EventFactory.new(event_params).result
     if @event.save
-      render json: {"event" => @event, "event_rsvps"=> @event.event_rsvps}, status: :ok
+      @event_rsvp = EventFactory.new(@event).event_creator_rsvp.save
+      render json: @event, serializer: EventSerializer, include: [:'event_rsvps'], adapter: :json_api, status: :ok
     else
+      puts @event.errors.full_messages
       render json: { errors: @event.errors.full_messages }, status: :unprocessable_entity
     end
   end
@@ -62,7 +64,7 @@ class API::V1::EventsController < ApplicationController
 
   private
     def event_params
-      params.require(:event).permit(:id, :title,:description, :event_start, :event_end, :event_allday, :location, :attachment, :locked, :potluck, :family_id, :member_id)
+      params.require(:event).permit(:id, :attributes => [:title,:description, :event_start, :event_end, :event_allday, :location, :attachment, :locked, :potluck, :family_id, :member_id])
     end
 
 end

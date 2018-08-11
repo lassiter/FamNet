@@ -1,5 +1,5 @@
 class API::V1::EventsRsvpsController < ApplicationController
-
+  before_action :authenticate_api_v1_member!
   def create
     @event_rsvp = EventRsvp.new(event_rsvp_params)
 

@@ -2,7 +2,9 @@ class Event < ApplicationRecord
   include Interaction
   include Commentable
   before_create do
-    self.event_start = Date.today unless self.event_start
+    event_allday = true unless self.event_start.present?
+    event_start = DateTime.parse("#{Date.today} 00:00:00") unless self.event_start.present?
+    event_end = DateTime.parse("#{Date.today} 23:59:59") unless self.event_end.present?
   end
   has_paper_trail
   default_scope { order(event_start: :desc) }
@@ -10,6 +12,8 @@ class Event < ApplicationRecord
   belongs_to :family
   belongs_to :member
   has_many :event_rsvps
+  # has_many :comments
+  # has_many :reactions
 
 
   validates :title, presence: true, length: { minimum: 1 }, format: { with: /[A-Za-z\u00C0-\u00D6\u00D8-\u00f6\u00f8-\u00ff\s"'-.!?;]+/, message: "only allows letters and \"'-.!?;" }
