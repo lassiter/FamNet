@@ -3,7 +3,7 @@ class EventSerializer < ActiveModel::Serializer
 
   type 'event'
 
-  attributes :id, :title, :description, :attachment, :event_start, :event_end, :event_allday, :location, :potluck, :locked, :family_id, :member_id
+  attributes :id, :title, :description, :attachment, :event_start, :event_end, :event_allday, :location, :potluck, :locked, :family_id, :member_id, :created_at, :updated_at
 
   link(:self) { api_v1_event_path(id: object.id) }
 

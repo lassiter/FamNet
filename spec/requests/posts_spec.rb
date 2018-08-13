@@ -13,7 +13,7 @@ RSpec.describe "Post API", type: :request do
     context "GET /posts Posts#index" do
       before do
         5.times { FactoryBot.create(:post, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id, ).member_id ) }
-        @comparable = Post.where(family_id: @member.families.ids) # todo: replace with pundit
+        @comparable = Post.where(family_id: @member.families.ids)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -497,7 +497,7 @@ RSpec.describe "Post API", type: :request do
     context "GET /posts Posts#index" do
       before do
         FactoryBot.create_list(:post, 5, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
-        @comparable = Post.where(family_id: @authorized_member_family_id) # todo: replace with pundit
+        @comparable = Post.where(family_id: @authorized_member_family_id)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -524,7 +524,7 @@ RSpec.describe "Post API", type: :request do
     end
     context "GET /posts Posts#show" do
       before do
-        @comparable = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id) # todo: replace with pundit
+        @comparable = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
         FactoryBot.create(:post, family_id: @unauthorized_member_family_id, member_id: @member.id)
       end
       before(:each) do
@@ -537,7 +537,7 @@ RSpec.describe "Post API", type: :request do
     end
     context "POST /posts Posts#create" do
       before do
-        @comparable = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @member.id) # todo: replace with pundit
+        @comparable = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @member.id)
         @create_request_params = {
           "post": {
             "attributes": {
@@ -622,7 +622,7 @@ RSpec.describe "Post API", type: :request do
 
       @member = nil
       FactoryBot.create_list(:post, 2, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
-      @comparable = Post.where(family_id: @authorized_member_family_id) # todo: replace with pundit
+      @comparable = Post.where(family_id: @authorized_member_family_id)
     end
     context "GET /posts Posts#index" do
       it "returns a 401 error saying they are not authenticated" do

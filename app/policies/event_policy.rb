@@ -17,8 +17,8 @@ class EventPolicy < ApplicationPolicy
   end
 
   def create?
-    parent_record_members_family_ids = FamilyMember.where(member_id: record.commentable.member_id).where.not(authorized_at: nil).pluck(:family_id)
-    auth = FamilyMember.where(family_id: parent_record_members_family_ids, member_id: current_user.id).where.not(authorized_at: nil)
+    record_members_family_ids = FamilyMember.where(member_id: record.member_id).where.not(authorized_at: nil).pluck(:family_id)
+    auth = FamilyMember.where(family_id: record_members_family_ids, member_id: current_user.id).where.not(authorized_at: nil)
     unless auth.empty?
       true
     else

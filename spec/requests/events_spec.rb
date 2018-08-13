@@ -15,6 +15,7 @@ RSpec.describe "Events API", type: :request do
       before do
         5.times { FactoryBot.create(:event, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id, ).member_id ) }
         @comparable = Event.where(family_id: @member.families.ids)
+        @comparable.pluck(:id).each {|id| FactoryBot.create(:event_rsvp, event_id: id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)}
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -40,7 +41,7 @@ RSpec.describe "Events API", type: :request do
         actual = json["data"].first["relationships"]["reactions"]["data"]
         expect(actual).to eq(expected)
       end
-      it 'and getting the index returns the comment_id each record' do
+      it 'and getting the index returns the comment records' do
         get '/v1/events', :headers => @auth_headers
         json = JSON.parse(response.body)
         expected = @comparable.first.comments
@@ -50,7 +51,6 @@ RSpec.describe "Events API", type: :request do
       end
       it 'shows links to relevant resources' do
         get '/v1/events', :headers => @auth_headers
-        
         json = JSON.parse(response.body)
         actual = json["data"].first["relationships"]
         expect(actual).to include("reactions")
@@ -62,6 +62,7 @@ RSpec.describe "Events API", type: :request do
     context "GET /events/:id Events#show" do
       before do
         @comparable = FactoryBot.create(:event, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id )
+        FactoryBot.create(:event_rsvp, event_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)
         FactoryBot.create_list(:comment, 2, commentable_type: "Event", commentable_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)
         FactoryBot.create(:reaction, interaction_type: "Event", interaction_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)
       end
@@ -138,11 +139,43 @@ RSpec.describe "Events API", type: :request do
         expect(actual_comment_links["related"]).to include("comments","#{@comparable.id}")
 
       end
+      it 'shows the includes in the json package' do
+        get "/v1/events/#{@comparable.id}", :headers => @auth_headers
+        json = JSON.parse(response.body)
+        actual = json["included"].first
+        actual_attributes = actual["attributes"]
+        expect(json["data"]["id"]).to eq(json["included"].first["relationships"]["event"]["data"]["id"])
+        expect(actual).to include("id")
+        expect(actual["type"]).to include("event-rsvps")
+        expect(actual_attributes).to include("party-size")
+        expect(actual_attributes).to include("rsvp")
+        expect(actual_attributes).to include("bringing-food")
+        expect(actual_attributes).to include("recipe-id")
+        expect(actual_attributes).to include("non-recipe-description")
+        expect(actual_attributes).to include("serving")
+        expect(actual_attributes).to include("member-id")
+        expect(actual_attributes).to include("party-companions")
+        expect(actual_attributes).to include("event-id")
+        expect(actual_attributes).to include("rsvp-note")
+      end
     end
     context "POST /events Events#create" do
       before do
        @comparable = FactoryBot.build(:event, family_id: @member_family_id, member_id: @member.id )
        @create_request_params = {
+          "event": {
+            "attributes": {
+              "title": @comparable.title,
+              "description": @comparable.description,
+              "location": @comparable.location,
+              "family_id": @comparable.family_id,
+              "member_id": @comparable.member_id,
+              "event_start": @comparable.event_start,
+              "event_end": @comparable.event_end
+            }
+          }
+        }
+      @create_request_params_without_dates = {
           "event": {
             "attributes": {
               "title": @comparable.title,
@@ -160,40 +193,67 @@ RSpec.describe "Events API", type: :request do
       it "200 status" do
         post '/v1/events', :params => @create_request_params, :headers => @auth_headers
         json = JSON.parse(response.body)
-        binding.pry
         expect(response).to have_http_status(200)
       end
       it 'and it returns the json for the newly created post' do
         post '/v1/events', :params => @create_request_params, :headers => @auth_headers
         json = JSON.parse(response.body)
         actual = json["data"]["attributes"]
-
         expect(response).to have_http_status(200)
         expect(actual["title"]).to eq(@comparable.title)
         expect(actual["description"]).to eq(@comparable.description)
-        expect(actual["location"][0]).to be_within(0.000000000009).of(@comparable.location[0])
-        expect(actual["location"][1]).to be_within(0.000000000009).of(@comparable.location[1])
         expect(actual["family-id"]).to eq(@comparable.family_id)
         expect(actual["member-id"]).to eq(@comparable.member_id)
+        expect(actual["event-start"].to_datetime).to eq(@comparable.event_start.to_datetime)
+        expect(actual["event-end"].to_datetime).to eq(@comparable.event_end.to_datetime)
+      end
+      it 'and without date input it defaults to current day' do
+        post '/v1/events', :params => @create_request_params_without_dates, :headers => @auth_headers
+        json = JSON.parse(response.body)
+        actual = json["data"]["attributes"]
+        expect(response).to have_http_status(200)
+        expect(actual["title"]).to eq(@comparable.title)
+        expect(actual["description"]).to eq(@comparable.description)
+        expect(actual["family-id"]).to eq(@comparable.family_id)
+        expect(actual["member-id"]).to eq(@comparable.member_id)
+        expect(actual["event-start"].to_datetime).to eq(DateTime.parse("#{Date.today} 00:00:00"))
+        expect(actual["event-end"].to_datetime).to eq(DateTime.parse("#{Date.today} 23:59:59"))
       end
       it 'shows the relationships and links to them in the json package' do
         post '/v1/events', :params => @create_request_params, :headers => @auth_headers
         json = JSON.parse(response.body)
         actual = json["data"]["relationships"]
-
         expect(actual).to include("reactions")
         expect(actual).to include("comments")
         expect(actual).to include("member")
         expect(actual).to include("family")
         expect(actual).to include("event-rsvps")
       end
+      it 'shows the includes in the json package' do
+        post '/v1/events', :params => @create_request_params, :headers => @auth_headers
+        json = JSON.parse(response.body)
+        actual = json["included"].first
+        actual_attributes = actual["attributes"]
+        expect(json["data"]["id"]).to eq(json["included"].first["relationships"]["event"]["data"]["id"])
+        expect(actual).to include("id")
+        expect(actual["type"]).to include("event-rsvps")
+        expect(actual_attributes).to include("party-size")
+        expect(actual_attributes).to include("rsvp")
+        expect(actual_attributes).to include("bringing-food")
+        expect(actual_attributes).to include("recipe-id")
+        expect(actual_attributes).to include("non-recipe-description")
+        expect(actual_attributes).to include("serving")
+        expect(actual_attributes).to include("member-id")
+        expect(actual_attributes).to include("party-companions")
+        expect(actual_attributes).to include("event-id")
+        expect(actual_attributes).to include("rsvp-note")
+      end
     end
     context "PUT - PATCH /events/:id Events#update" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
         @comparable = FactoryBot.create(:event, family_id: @member_family_id, member_id: @member.id )
-        update_put = FactoryBot.build(:event, family_id: @member_family_id, member_id: @member.id )
-        update_patch = FactoryBot.build(:event, family_id: @member_family_id, member_id: @member.id )
+        update = FactoryBot.build(:event, family_id: @member_family_id, member_id: @member.id )
         @update_put_request_params = {
           "id": @comparable.id,
           "event": {
@@ -201,13 +261,13 @@ RSpec.describe "Events API", type: :request do
             "attributes": {
               "family_id": @comparable.family_id,
               "member_id": @comparable.member_id,
-              "body": update_put.body,
-              "location": update_put.location,
-              "edit": update_put.edit,
-              "attachment": update_put.attachment,
-              "locked": update_put.locked,
-              "created_at": update_put.created_at,
-              "updated_at": update_put.updated_at
+              "title": update.title,
+              "description": update.description,
+              "location": update.location,
+              "attachment": update.attachment,
+              "locked": update.locked,
+              "created_at": update.created_at,
+              "updated_at": update.updated_at
             }
           }
         }
@@ -216,7 +276,7 @@ RSpec.describe "Events API", type: :request do
           "event": {
             "id": @comparable.id,
             "attributes": {
-              "body": update_patch.body
+              "title": update.title
             }
           }
         }
@@ -227,14 +287,13 @@ RSpec.describe "Events API", type: :request do
         
         json = JSON.parse(response.body)
         actual = json["data"]["attributes"]
-        
         expect(response).to have_http_status(200)
-        expect(actual["body"]).to eq(expected[:body])
+        expect(actual["title"]).to eq(expected[:title])
         expect(actual["location"]).to eq(expected[:location])
         expect(actual["family-id"]).to eq(expected[:family_id])
         expect(actual["member-id"]).to eq(expected[:member_id])
         expect(actual["attachment"]).to eq(expected[:attachment])
-        expect(actual["edit"]).to eq(expected[:edit])
+        expect(actual["description"]).to eq(expected[:description])
         expect(actual["created-at"].to_datetime).to_not eq(expected[:created_at])
         expect(actual["updated-at"].to_datetime).to_not eq(expected[:updated_at])
       end
@@ -246,8 +305,8 @@ RSpec.describe "Events API", type: :request do
         actual = json["data"]
         expect(response).to have_http_status(200)
         expect(actual["id"].to_i).to eq(@comparable.id)
-        expect(actual["attributes"]["body"]).to eq(expected[:body])
-        expect(actual["attributes"]["edit"]).to eq(@comparable.edit)
+        expect(actual["attributes"]["title"]).to eq(expected[:title])
+        expect(actual["attributes"]["description"]).to eq(@comparable.description)
         expect(actual["attributes"]["attachment"]).to eq(@comparable.attachment)
         expect(actual["attributes"]["locked"]).to eq(@comparable.locked)
         expect(actual["attributes"]["family-id"]).to eq(@comparable.family_id)
@@ -263,6 +322,7 @@ RSpec.describe "Events API", type: :request do
         expect(actual).to include("reactions")
         expect(actual).to include("comments")
         expect(actual).to include("member")
+        expect(actual).to include("event-rsvps")
       end
       it '#put shows the relationships and links to them in the json package' do
         patch "/v1/events/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
@@ -271,6 +331,7 @@ RSpec.describe "Events API", type: :request do
         expect(actual).to include("reactions")
         expect(actual).to include("comments")
         expect(actual).to include("member")
+        expect(actual).to include("event-rsvps")
       end
     end
     context "DELETE /events/:id Events#destroy" do
@@ -280,13 +341,13 @@ RSpec.describe "Events API", type: :request do
       it "can sucessfully delete a post" do
         @comparable = FactoryBot.create(:event, family_id: @member_family_id, member_id: @member.id )
         @delete_request_params = {:id => @comparable.id }
-
         delete "/v1/events/#{@comparable.id}", :params => @delete_request_params, :headers => @auth_headers
         expect(response).to have_http_status(204)
       end
       it 'returns 404 for missing content' do
         @comparable = FactoryBot.create(:event, family_id: @member_family_id, member_id: @member.id )
-        Post.find(@comparable.id).destroy
+        @delete_request_params = {:id => @comparable.id }
+        Event.find(@comparable.id).destroy
         delete "/v1/events/#{@comparable.id}", :params => @delete_request_params, :headers => @auth_headers
         json = JSON.parse(response.body) 
         expect(json).to eq({})
@@ -313,9 +374,9 @@ RSpec.describe "Events API", type: :request do
               "attributes": {
                 "family_id": @updates[:family_id],
                 "member_id": @updates[:member_id],
-                "body": @updates[:body],
+                "title": @updates[:title],
                 "location": @updates[:location],
-                "edit": @updates[:edit],
+                "description": @updates[:description],
                 "attachment": @updates[:attachment],
                 "locked": @updates[:locked],
                 "updated_at": @updates[:updated_at]
@@ -330,7 +391,7 @@ RSpec.describe "Events API", type: :request do
           unauthorized_patch_of_post_params = {
             "id": @updates[:id],
             "event": {
-              "body": @updates[:body]
+              "title": @updates[:title]
             }
           }
 
@@ -344,7 +405,7 @@ RSpec.describe "Events API", type: :request do
               "id": @updates[:id],
               "family_id": @updates[:family_id],
               "member_id": @updates[:member_id],
-              "edit": @updates[:edit],
+              "description": @updates[:description],
               "locked": @updates[:locked],
               "created_at": @updates[:created_at]
             }
@@ -359,7 +420,7 @@ RSpec.describe "Events API", type: :request do
               "id": @updates[:id],
               "family_id": @updates[:family_id],
               "member_id": @updates[:member_id],
-              "edit": @updates[:edit],
+              "description": @updates[:description],
               "locked": @updates[:locked],
               "created_at": @updates[:created_at]
             }
@@ -394,22 +455,21 @@ RSpec.describe "Events API", type: :request do
     before(:each) do
       @auth_headers = @member.create_new_auth_token
       @comparable = FactoryBot.create(:event, family_id: @member_family_id, member_id: @normal_member.id )
-      update_put = FactoryBot.build(:event, family_id: @member_family_id, member_id: @member.id )
-      update_patch = FactoryBot.build(:event, family_id: @member_family_id, member_id: @member.id )
+      update = FactoryBot.build(:event, family_id: @member_family_id, member_id: @member.id )
       @update_put_request_params = {
         "id": @comparable.id,
         "event": {
           "id": @comparable.id,
           "attributes": {
-            "family_id": update_put.family_id,
-            "member_id": update_put.member_id,
-            "body": update_put.body,
-            "location": update_put.location,
-            "edit": update_put.edit,
-            "attachment": update_put.attachment,
-            "locked": update_put.locked,
-            "created_at": update_put.created_at,
-            "updated_at": update_put.updated_at
+            "family_id": @comparable.family_id,
+            "member_id": @comparable.member_id,
+            "title": update.title,
+            "description": update.description,
+            "location": update.location,
+            "attachment": update.attachment,
+            "locked": update.locked,
+            "created_at": update.created_at,
+            "updated_at": update.updated_at
           }
         }
       }
@@ -418,7 +478,7 @@ RSpec.describe "Events API", type: :request do
         "event": {
           "id": @comparable.id,
           "attributes": {
-            "body": update_patch.body
+            "title": update.title
           }
         }
       }
@@ -430,14 +490,13 @@ RSpec.describe "Events API", type: :request do
         
         json = JSON.parse(response.body)
         actual = json["data"]["attributes"]
-        
         expect(response).to have_http_status(200)
-        expect(actual["body"]).to eq(expected[:body])
+        expect(actual["title"]).to eq(expected[:title])
         expect(actual["location"]).to eq(expected[:location])
         expect(actual["family-id"]).to eq(@comparable.family_id) # actual vs expected tested in Unauthorized to Family
-        expect(actual["member-id"]).to_not eq(expected[:member_id])
+        expect(actual["member-id"]).to eq(@comparable.member_id)
         expect(actual["attachment"]).to eq(expected[:attachment])
-        expect(actual["edit"]).to eq(expected[:edit])
+        expect(actual["description"]).to eq(expected[:description])
         expect(actual["created-at"]).to_not eq(expected[:created_at])
         expect(actual["updated-at"]).to_not eq(expected[:updated_at])
       end
@@ -448,13 +507,13 @@ RSpec.describe "Events API", type: :request do
         json = JSON.parse(response.body)
         actual = json["data"]["attributes"]
         expect(response).to have_http_status(200)
-        expect(actual["body"]).to eq(expected[:body]) # updated
+        expect(actual["title"]).to eq(expected[:title]) # updated
         expect(actual["location"][0]).to be_within(0.000000000009).of(@comparable.location[0])
         expect(actual["location"][1]).to be_within(0.000000000009).of(@comparable.location[1])
         expect(actual["family-id"]).to eq(@comparable.family_id) # actual vs expected tested in Unauthorized to Family
         expect(actual["member-id"]).to eq(@comparable.member_id)
         expect(actual["attachment"]).to eq(@comparable.attachment)
-        expect(actual["edit"]).to eq(@comparable.edit)
+        expect(actual["description"]).to eq(@comparable.description)
         expect(actual["created-at"]).to_not eq(@comparable.created_at)
         expect(actual["updated-at"]).to_not eq(@comparable.updated_at)
       end
@@ -488,7 +547,7 @@ RSpec.describe "Events API", type: :request do
     context "GET /events Events#index" do
       before do
         FactoryBot.create_list(:event, 5, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
-        @comparable = Post.where(family_id: @authorized_member_family_id) # todo: replace with pundit
+        @comparable = Event.where(family_id: @authorized_member_family_id)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -507,16 +566,15 @@ RSpec.describe "Events API", type: :request do
         get '/v1/events', :headers => @auth_headers
         json = JSON.parse(response.body)
         actual = json["data"]
-        scoped_post_all = Post.where(family_id: [@unauthorized_member_family_id, @authorized_member_family_id])
+        scoped_post_all = Event.where(family_id: [@unauthorized_member_family_id, @authorized_member_family_id])
         expect(actual.count).to eq(1)
-        expect(actual.first["attributes"]["body"]).to eq(expected.body)
+        expect(actual.first["attributes"]["title"]).to eq(expected.title)
         expect(scoped_post_all.count).to eq(6)
       end
     end
     context "GET /events Events#show" do
       before do
-        @comparable = FactoryBot.create(:event, family_id: @authorized_member_family_id, member_id: @authorized_member.id) # todo: replace with pundit
-        FactoryBot.create(:event, family_id: @unauthorized_member_family_id, member_id: @member.id)
+        @comparable = FactoryBot.create(:event, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -528,14 +586,17 @@ RSpec.describe "Events API", type: :request do
     end
     context "POST /events Events#create" do
       before do
-        @comparable = FactoryBot.build(:event, family_id: @authorized_member_family_id, member_id: @member.id) # todo: replace with pundit
+        @comparable = FactoryBot.build(:event, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
         @create_request_params = {
           "event": {
             "attributes": {
               "title": @comparable.title,
+              "description": @comparable.description,
               "location": @comparable.location,
               "family_id": @comparable.family_id,
-              "member_id": @comparable.member_id
+              "member_id": @comparable.member_id,
+              "event_start": @comparable.event_start,
+              "event_end": @comparable.event_end
             }
           }
         }
@@ -553,9 +614,8 @@ RSpec.describe "Events API", type: :request do
         @auth_headers = @member.create_new_auth_token
       end
       before do
-        @comparable = FactoryBot.create(:event, family_id: @member_family_id, member_id: @member.id )
-        update_put = FactoryBot.build(:event, family_id: @member_family_id, member_id: @member.id )
-        update_patch = FactoryBot.build(:event, family_id: @member_family_id, member_id: @member.id )
+        @comparable = FactoryBot.create(:event, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
+        update = FactoryBot.build(:event, family_id: @unauthorized_member_family_id, member_id: @member.id )
         @update_put_request_params = {
           "id": @comparable.id,
           "event": {
@@ -563,13 +623,13 @@ RSpec.describe "Events API", type: :request do
             "attributes": {
               "family_id": @comparable.family_id,
               "member_id": @comparable.member_id,
-              "body": update_put.body,
-              "location": update_put.location,
-              "edit": update_put.edit,
-              "attachment": update_put.attachment,
-              "locked": update_put.locked,
-              "created_at": update_put.created_at,
-              "updated_at": update_put.updated_at
+              "title": update.title,
+              "location": update.location,
+              "description": update.description,
+              "attachment": update.attachment,
+              "locked": update.locked,
+              "created_at": update.created_at,
+              "updated_at": update.updated_at
             }
           }
         }
@@ -578,7 +638,7 @@ RSpec.describe "Events API", type: :request do
           "event": {
             "id": @comparable.id,
             "attributes": {
-              "body": update_patch.body
+              "title": update.title
             }
           }
         }
@@ -613,7 +673,7 @@ RSpec.describe "Events API", type: :request do
 
       @member = nil
       FactoryBot.create_list(:event, 2, family_id: @authorized_member_family_id, member_id: @authorized_member.id)
-      @comparable = Post.where(family_id: @authorized_member_family_id) # todo: replace with pundit
+      @comparable = Event.where(family_id: @authorized_member_family_id)
     end
     context "GET /events Events#index" do
       it "returns a 401 error saying they are not authenticated" do
@@ -633,10 +693,13 @@ RSpec.describe "Events API", type: :request do
         @create_request_params = {
           "event": {
             "attributes": {
-              "body": comparable_for_create.body,
+              "title": comparable_for_create.title,
+              "description": comparable_for_create.description,
               "location": comparable_for_create.location,
               "family_id": comparable_for_create.family_id,
-              "member_id": comparable_for_create.member_id
+              "member_id": comparable_for_create.member_id,
+              "event_start": comparable_for_create.event_start,
+              "event_end": comparable_for_create.event_end
             }
           }
         }
@@ -647,8 +710,7 @@ RSpec.describe "Events API", type: :request do
     context "PUT-PATCH /events Events#update" do
       before do
         @comparable = FactoryBot.create(:event, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
-        update_put = FactoryBot.build(:event, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
-        update_patch = FactoryBot.build(:event, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
+        update = FactoryBot.build(:event, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
         @update_put_request_params = {
           "id": @comparable.id,
           "event": {
@@ -656,13 +718,13 @@ RSpec.describe "Events API", type: :request do
             "attributes": {
               "family_id": @comparable.family_id,
               "member_id": @comparable.member_id,
-              "body": update_put.body,
-              "location": update_put.location,
-              "edit": update_put.edit,
-              "attachment": update_put.attachment,
-              "locked": update_put.locked,
-              "created_at": update_put.created_at,
-              "updated_at": update_put.updated_at
+              "title": update.title,
+              "location": update.location,
+              "description": update.description,
+              "attachment": update.attachment,
+              "locked": update.locked,
+              "created_at": update.created_at,
+              "updated_at": update.updated_at
             }
           }
         }
@@ -671,7 +733,7 @@ RSpec.describe "Events API", type: :request do
           "event": {
             "id": @comparable.id,
             "attributes": {
-              "body": update_patch.body
+              "title": update.title
             }
           }
         }
