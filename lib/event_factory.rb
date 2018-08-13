@@ -1,6 +1,7 @@
 class EventFactory
   
   def initialize(event)
+
     if event.instance_of?(ActionController::Parameters)
       @event = event["attributes"]
       @title = @event["title"]
@@ -11,6 +12,7 @@ class EventFactory
       !@event["location"].present? ? @location = nil : @location = @event["location"]
       !@event["potluck"].present? ? @potluck = false : @potluck = @event["potluck"]
       !@event["locked"].present? ? @locked = false : @locked = @event["locked"]
+      !@event["party_companions"].present? ? @party_companions = [] : @party_companions = @event["party_companions"]
 
       unless @event["event_start"].present? && @event["event_end"].present?
         @event_start = DateTime.parse("#{Date.today} 00:00:00")
@@ -37,7 +39,7 @@ class EventFactory
       non_recipe_description: nil,
       serving: 0,
       member_id: @member.id,
-      party_companions: nil,
+      party_companions: [],
       event_id: @event.id,
       rsvp_note: nil
     })
