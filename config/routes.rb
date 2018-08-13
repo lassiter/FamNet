@@ -16,7 +16,7 @@ Rails.application.routes.draw do
       }
       resources :members, :except => [:create]
       get 'directory', action: :index, controller: 'members'
-      resources :events_rsvps, only: [:create, :destroy]
+      resources :events_rsvps, only: [:create, :destroy, :update]
       resources :events do
         resources :reactions, only: [:index]
         resources :comments do

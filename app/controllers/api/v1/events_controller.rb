@@ -49,7 +49,7 @@ class API::V1::EventsController < ApplicationController
         render json: { errors: @event.errors.full_messages }, status: :unprocessable_entity
       end
     rescue Pundit::NotAuthorizedError
-      @event.errors.add(:id, :forbidden, message: "current user is not authorized to view this event")
+      @event.errors.add(:id, :forbidden, message: "current user is not authorized to create this event")
       render :json => { errors: @event.errors.full_messages }, :status => :forbidden
     rescue ActiveRecord::RecordNotFound
       render :json => {}, :status => :not_found
@@ -67,7 +67,7 @@ class API::V1::EventsController < ApplicationController
         render json: { errors: @event.errors.full_messages }, status: :unprocessable_entity
       end
     rescue Pundit::NotAuthorizedError
-      @event.errors.add(:id, :forbidden, message: "current user is not authorized to view this event")
+      @event.errors.add(:id, :forbidden, message: "current user is not authorized to update this event")
       render :json => { errors: @event.errors.full_messages }, :status => :forbidden
     rescue ActiveRecord::RecordNotFound
       render :json => {}, :status => :not_found
