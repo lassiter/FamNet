@@ -47,7 +47,8 @@ RSpec.describe InviteMailer, type: :mailer do
     end
     it 'assigns @registration_url' do
       expect(mail.body.encoded)
-        .to include(Rails.application.routes.url_helpers.new_api_v1_member_registration_url(:invite_token => @invite.token))
+        .to include(Rails.application.routes.url_helpers
+          .new_api_v1_member_registration_url(:invite_token => @invite.token))
     end
   end
 end
