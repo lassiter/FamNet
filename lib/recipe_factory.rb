@@ -1,5 +1,6 @@
 class RecipeFactory
   def initialize(recipe_params)
+    recipe_params = recipe_params.to_h
     @title = recipe_params["title"].to_s
 
     @description = recipe_params["description"].to_s
@@ -16,12 +17,12 @@ class RecipeFactory
       t = tag
       tag = Tag.find_or_create_by(title: tag["title"].titleize)
       if tag.description == nil
-        tag.description = t["description"]
+        tag.update_attributes(description: t["description"])
       end
-      if tag.mature == true
-        tag.mature = t["mature"]
+      if t["mature"].present? && ActiveModel::Type::Boolean.new.cast(t["mature"]) == true
+        tag.update_attributes(mature: ActiveModel::Type::Boolean.new.cast(t["mature"]))
       end
-      @tags_object_array << tag   
+      @tags_object_array << tag
     end
 
     @steps = recipe_params["steps"] # json
@@ -43,14 +44,15 @@ class RecipeFactory
   end
 
   def factory_callback(id)
+    joins = []
     @tags_object_array.each do |tag|
-      RecipeTag.create(tag_id: tag.id, recipe_id: id)
+      joins << RecipeTag.create(tag_id: tag.id, recipe_id: id)
     end
 
     @ingredients_object_array.each do |ingredient|
-      RecipeIngredient.create(ingredient_id: ingredient.id, recipe_id: id)
+      joins << RecipeIngredient.create(ingredient_id: ingredient.id, recipe_id: id)
     end
-
+    return joins
   end
 
 end
