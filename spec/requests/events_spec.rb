@@ -146,7 +146,7 @@ RSpec.describe "Events API", type: :request do
         actual_attributes = actual["attributes"]
         expect(json["data"]["id"]).to eq(json["included"].first["relationships"]["event"]["data"]["id"])
         expect(actual).to include("id")
-        expect(actual["type"]).to include("event-rsvps")
+        expect(actual["type"]).to include("event-rsvp")
         expect(actual_attributes).to include("party-size")
         expect(actual_attributes).to include("rsvp")
         expect(actual_attributes).to include("bringing-food")
@@ -236,7 +236,7 @@ RSpec.describe "Events API", type: :request do
         actual_attributes = actual["attributes"]
         expect(json["data"]["id"]).to eq(json["included"].first["relationships"]["event"]["data"]["id"])
         expect(actual).to include("id")
-        expect(actual["type"]).to include("event-rsvps")
+        expect(actual["type"]).to include("event-rsvp")
         expect(actual_attributes).to include("party-size")
         expect(actual_attributes).to include("rsvp")
         expect(actual_attributes).to include("bringing-food")

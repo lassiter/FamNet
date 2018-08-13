@@ -22,7 +22,7 @@ class ProfileSerializer < ActiveModel::Serializer
       link(:related) { api_v1_family_path(id: family.id) }
     end
   end
-  has_many :event_rsvps, through: :events, serializer: EventRsvpPreviewSerializer do
+  has_many :event_rsvps, through: :events, serializer: EventRsvpSerializer do
     object.event_rsvps.each do |rsvp|
       link(:event) { api_v1_event_path(id: rsvp.event_id) }
     end
