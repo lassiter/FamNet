@@ -15,8 +15,6 @@ class Post < ApplicationRecord
   validates_presence_of :member_id
   validates :locked, inclusion: { in: [ true , false ] }, exclusion: { in: [nil] }
 
-  # has_one_attachment :attachment
-
   def validate_location
     # Resource: https://gis.stackexchange.com/questions/8650/measuring-accuracy-of-latitude-and-longitude
     # If it's nil or blank it's valid.

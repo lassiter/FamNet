@@ -194,7 +194,6 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
     t.text "body", null: false
     t.float "location", array: true
     t.text "edit"
-    t.binary "attachment"
     t.boolean "locked", default: false
     t.bigint "family_id"
     t.bigint "member_id"
@@ -237,17 +236,12 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
     t.string "title", null: false
     t.text "description"
     t.json "steps"
-    t.binary "attachment"
     t.text "ingredients_list", array: true
     t.text "tags_list", array: true
     t.bigint "member_id"
-    t.bigint "tag_id"
-    t.bigint "ingredient_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["ingredient_id"], name: "index_recipes_on_ingredient_id"
     t.index ["member_id"], name: "index_recipes_on_member_id"
-    t.index ["tag_id"], name: "index_recipes_on_tag_id"
   end
 
   create_table "tags", force: :cascade do |t|

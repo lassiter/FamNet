@@ -9,6 +9,7 @@ RSpec.describe Recipe, type: :model do
     it { should belong_to(:member) }
   end
   it_behaves_like 'interaction'
+  it_behaves_like 'media'
   describe "valid" do
     it 'FactoryBot factory should be valid' do
       expect(FactoryBot.build(:recipe, member_id: FactoryBot.create(:family_member).member_id)).to be_valid
@@ -29,10 +30,6 @@ RSpec.describe Recipe, type: :model do
       end
       it "all nils should be invalid :: steps" do
         recipe = Recipe.new(steps: nil)
-        expect(recipe).to_not be_valid
-      end
-      it "all nils should be invalid :: attachment" do
-        recipe = Recipe.new(attachment: nil)
         expect(recipe).to_not be_valid
       end
       it "all nils should be invalid :: ingredients_list" do
@@ -59,10 +56,6 @@ RSpec.describe Recipe, type: :model do
       end
       it "all nils should be invalid :: steps" do
         recipe = Recipe.new(steps: "")
-        expect(recipe).to_not be_valid
-      end
-      it "all nils should be invalid :: attachment" do
-        recipe = Recipe.new(attachment: "")
         expect(recipe).to_not be_valid
       end
       it "all nils should be invalid :: ingredients_list" do

@@ -1,7 +1,11 @@
 class RecipeSerializer < ActiveModel::Serializer
   include Rails.application.routes.url_helpers
   type "recipe"
-  attributes :id, :title, :description, :steps, :attachment, :ingredients_list, :tags_list, :member_id, :created_at, :updated_at
+  attributes :id, :title, :description, :steps, :media, :ingredients_list, :tags_list, :member_id, :created_at, :updated_at
+
+  def media # Required to avoid n+1 serialization failures.
+    object.media.attached? ? rails_blob_path(object.media) : nil
+  end
 
   link(:self) { api_v1_recipes_url(id: object.id) }
 
