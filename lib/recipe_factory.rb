@@ -1,6 +1,6 @@
 class RecipeFactory
   def initialize(recipe_params)
-    recipe_params = recipe_params["attributes"].to_h
+    recipe_params = recipe_params["attributes"].to_h if recipe_params["attributes"].present?
     @title = recipe_params["title"].to_s if recipe_params["title"].present?
 
     @description = recipe_params["description"].to_s  if recipe_params["description"].present?

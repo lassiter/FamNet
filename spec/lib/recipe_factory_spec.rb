@@ -93,6 +93,7 @@ RSpec.describe RecipeFactory do
     end
     it 'it removes RecipeTags when a tag is dropped' do
       dropped_params = {
+        "member_id"=>@member.id.to_s,
         "tags_list"=>[
           {"title"=>"foobar"}, 
           {"title"=>"foobaz", "description"=>"Illo qui assumenda dolorem ut id quisquam et."}
@@ -104,6 +105,7 @@ RSpec.describe RecipeFactory do
     end
     it 'it adds RecipeTags when a tag is added' do
       added_params = {
+        "member_id"=>@member.id.to_s,
         "tags_list"=>[
           {"title"=>"foobar"}, 
           {"title"=>"foobaz", "description"=>"Illo qui assumenda dolorem ut id quisquam et."}, 
@@ -118,6 +120,7 @@ RSpec.describe RecipeFactory do
     end
     it 'it removes RecipeIngredients when a ingredient is dropped' do
       dropped_params = {
+        "member_id"=>@member.id.to_s,
         "ingredients_list"=>["CarobCarrot", "Rose Water", "Star Fruit", "Custard ApplesDaikon", "Pine Nut"]
       }
       expect{RecipeFactory.new(dropped_params).update_callback(@recipe_to_callback.id)}.to change{@recipe_to_callback.ingredients.count}.from(6).to(5)
@@ -127,6 +130,7 @@ RSpec.describe RecipeFactory do
     end
     it 'it adds RecipeIngredients when a ingredient is added' do
       added_params = {
+        "member_id"=>@member.id.to_s,
         "ingredients_list"=>["CarobCarrot", "Rose Water", "Star Fruit", "Custard ApplesDaikon", "Pine Nut", "Mountain Bread", "Apple Pie"]
       }
       expect{RecipeFactory.new(added_params).update_callback(@recipe_to_callback.id)}.to change{@recipe_to_callback.ingredients.count}.from(6).to(7)
