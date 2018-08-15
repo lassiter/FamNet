@@ -15,6 +15,7 @@ RSpec.describe Event, type: :model do
   before(:each) do
     @comparable = FactoryBot.build(:event, family_id: @family_id, member_id: @member_id)
   end
+  it_behaves_like 'media'
   it_behaves_like 'interaction'
   describe "valid" do
     it "all nils should be valid :: location" do

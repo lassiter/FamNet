@@ -163,10 +163,6 @@ RSpec.describe "Post API", type: :request do
             expect(actual["attributes"]).to include("links") unless actual["type"] == "reaction"
           end
         end
-
-        # expect(actual).to include("reactions")
-        # expect(actual).to include("comments")
-        # expect(actual).to include("member")
       end
     end
     context "POST /posts Posts#create" do
@@ -306,7 +302,7 @@ RSpec.describe "Post API", type: :request do
         expect(response).to have_http_status(200)
         json = JSON.parse(response.body)["data"]["attributes"]["media"]
         expect(@comparable.reload.media.attached?).to eq(true)
-        expect(rails_blob_path(@comparable.reload.media)).to include(@image_file.original_filename)
+        expect(rails_blob_path(@comparable.reload.media)).to eq(json)
       end
     end
     context "DELETE /posts/:id Posts#destroy" do
@@ -361,6 +357,7 @@ RSpec.describe "Post API", type: :request do
 
           put "/v1/posts/#{@comparable.id}", :params => unauthorized_update_put_request_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
+          expect(ActiveStorage::Attachment.all).to be_empty
         end
         it "unable to #patch update on another family member's post" do
           unauthorized_patch_of_post_params = {
@@ -373,6 +370,7 @@ RSpec.describe "Post API", type: :request do
 
           patch "/v1/posts/#{@comparable.id}", :params => unauthorized_patch_of_post_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
+          expect(ActiveStorage::Attachment.all).to be_empty
         end
         it "unable to #patch update on a protected field" do
           update_patch_request_unpermitted_params = {
@@ -389,6 +387,7 @@ RSpec.describe "Post API", type: :request do
           }
           patch "/v1/posts/#{@comparable.id}", :params => update_patch_request_unpermitted_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
+          expect(ActiveStorage::Attachment.all).to be_empty
         end
         it "unable to #put update on a protected field" do
           update_put_request_unpermitted_params = {
@@ -405,6 +404,7 @@ RSpec.describe "Post API", type: :request do
           }
           put "/v1/posts/#{@comparable.id}", :params => update_put_request_unpermitted_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
+          expect(ActiveStorage::Attachment.all).to be_empty
         end
       end
       context "DELETE /posts Posts#delete :: Member 2 => Member 1" do
@@ -585,6 +585,7 @@ RSpec.describe "Post API", type: :request do
       it "unable to create a post in another family" do
         post "/v1/posts", :params => @create_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
     end
     context "PUT-PATCH /posts Posts#update" do
@@ -625,10 +626,12 @@ RSpec.describe "Post API", type: :request do
       it "returns 403 error for an unauthorized update put" do
         put "/v1/posts/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
       it 'returns 403 error for an unauthorized update patch' do
         patch "/v1/posts/#{@comparable.id}", :params => @update_patch_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
     end
     context "DELETE /posts Posts#destroy" do

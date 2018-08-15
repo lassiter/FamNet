@@ -3,7 +3,11 @@ class CommentSerializer < ActiveModel::Serializer
 
   type 'comment'
 
-  attributes :id, :body, :edit, :commentable_type, :commentable_id, :member_id, :attachment, :created_at, :updated_at
+  attributes :id, :body, :edit, :commentable_type, :commentable_id, :member_id, :media, :created_at, :updated_at
+  def media # Required to avoid n+1 serialization failures.
+    object.media.attached? ? rails_blob_path(object.media) : nil
+  end
+
   attribute :links do
     id = object.id
     member_id = object.member
