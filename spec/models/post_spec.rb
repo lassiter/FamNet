@@ -53,10 +53,6 @@ RSpec.describe Post, type: :model do
         post = FactoryBot.build(:post, member_id: @member_id, edit: nil)
         expect(post).to be_valid
       end
-      it "all nils should be valid :: attachment" do
-        post = FactoryBot.build(:post, member_id: @member_id, attachment: nil)
-        expect(post).to be_valid
-      end
     end
   end
   describe "invalid" do
@@ -99,10 +95,10 @@ RSpec.describe Post, type: :model do
       end
     end
     describe ":: nils" do
-      it "all nils should be invalid :: body" do
-        post = Post.new(body: "")
-        expect(post).to_not be_valid
-      end
+      # it "all nils should be invalid :: body" do
+      #   post = Post.new(body: "")
+      #   expect(post).to_not be_valid
+      # end
       it "all nils should be invalid :: locked" do
         post = Post.new(locked: nil)
         expect(post).to_not be_valid
@@ -117,20 +113,16 @@ RSpec.describe Post, type: :model do
       end
     end
     describe ":: emptys" do
-      it "all nils should be invalid :: body" do
-        post = Post.new(body: "")
-        expect(post).to_not be_valid
-      end
+      # it "all nils should be invalid :: body" do
+      #   post = Post.new(body: "")
+      #   expect(post).to_not be_valid
+      # end
       it "all nils should be invalid :: location" do
         post = Post.new(location: "")
         expect(post).to_not be_valid
       end
       it "all nils should be invalid :: edit" do
         post = Post.new(edit: "")
-        expect(post).to_not be_valid
-      end
-      it "all nils should be invalid :: attachment" do
-        post = Post.new(attachment: "")
         expect(post).to_not be_valid
       end
       it "all nils should be invalid :: locked" do
@@ -145,6 +137,18 @@ RSpec.describe Post, type: :model do
         post = Post.new(member_id: "")
         expect(post).to_not be_valid
       end
+    end
+  end
+  describe 'body - media validation' do
+    it 'should not be valid if body is missing and media is missing' do
+      subject = FactoryBot.build(:post, body: nil, media: nil)
+      expect(subject).to_not be_valid
+      expect(subject.media.attached?).to be_falsey
+    end
+    it 'should be valid if media is present and body is not' do
+      subject = FactoryBot.build(:post, body: nil, media: fixture_file_upload(Rails.root.to_s + '/spec/fixtures/images/img.jpg', 'img/jpg'))
+      expect(subject).to be_valid
+      expect(subject.media.attached?).to be_truthy
     end
   end
 end

@@ -191,7 +191,7 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
   end
 
   create_table "posts", force: :cascade do |t|
-    t.text "body", null: false
+    t.text "body"
     t.float "location", array: true
     t.text "edit"
     t.boolean "locked", default: false
