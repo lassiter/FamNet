@@ -43,6 +43,8 @@ class API::V1::EventsController < ApplicationController
       @event = EventFactory.new(event_params).result
       authorize @event
       if @event.save
+        @event.media.attach(event_params[:attributes][:media]) if event_params[:attributes][:media].present?
+        # Callback to create EventRsvp of Event Creator.
         @event_rsvp = EventFactory.new(@event).event_creator_rsvp.save
         render json: @event, serializer: EventSerializer, include: [:'event_rsvps'], adapter: :json_api, status: :ok
       else
@@ -59,8 +61,8 @@ class API::V1::EventsController < ApplicationController
   def update
     begin
       @event = Event.find(params[:id])
-      @event.assign_attributes(update_event_params)
       authorize @event
+      @event.assign_attributes(update_event_params["attributes"])
       if @event.save
         render json: @event
       else
@@ -90,10 +92,10 @@ class API::V1::EventsController < ApplicationController
 
   private
     def update_event_params
-      params.require(:event).permit(:id, :attributes => [:title, :description, :event_start, :event_end, :event_allday, :attachment, :locked, :potluck, :location => []])
+      params.require(:event).permit(:id, :attributes => [:title, :description, :event_start, :event_end, :event_allday, :media, :locked, :potluck, :location => []])
     end
     def event_params
-      params.require(:event).permit(:id, :attributes => [:title, :description, :event_start, :event_end, :event_allday, :attachment, :locked, :potluck, :family_id, :member_id, :location => []])
+      params.require(:event).permit(:id, :attributes => [:title, :description, :event_start, :event_end, :event_allday, :media, :locked, :potluck, :family_id, :member_id, :location => []])
     end
 
 end

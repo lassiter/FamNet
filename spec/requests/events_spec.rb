@@ -6,6 +6,9 @@ RSpec.describe "Events API", type: :request do
     family_member = FactoryBot.create(:family_member, family_id: @family.id, authorized_at: DateTime.now)
     @member = family_member.member
     @member_family_id = family_member.family_id
+    @image_file = fixture_file_upload(Rails.root.to_s + '/spec/fixtures/images/img.jpg', 'img/jpg')
+    @image_filename = 'img.jpg'
+    @image_content_type = 'image/jpg'
   end
   describe ':: Members / Same Family ::' do
     before do
@@ -16,6 +19,8 @@ RSpec.describe "Events API", type: :request do
         5.times { FactoryBot.create(:event, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id, ).member_id ) }
         @comparable = Event.where(family_id: @member.families.ids)
         @comparable.pluck(:id).each {|id| FactoryBot.create(:event_rsvp, event_id: id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)}
+        @media_attached_comparable = @comparable.first
+        @media_attached_comparable.media.attach(io: File.open(@image_file), filename: @image_filename, content_type: @image_content_type)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -28,9 +33,10 @@ RSpec.describe "Events API", type: :request do
         get '/v1/events', :headers => @auth_headers
 
         json = JSON.parse(response.body) 
-        expected = @comparable.first
-        actual = json["data"].first
-        expect(actual["id"].to_i).to eq(expected.id)
+        expected = @comparable.pluck(:id)
+        actual = []
+        json["data"].each {|data| actual << data["id"].to_i}
+        expect(actual.sort).to eq(expected.sort)
         expect(json["data"].count).to eq(@comparable.count)
         expect(response).to have_http_status(200)
       end
@@ -58,6 +64,17 @@ RSpec.describe "Events API", type: :request do
         expect(actual).to include("member")
         expect(actual).to include("family")
       end
+      it 'the serializer should attach the blob path or return nil for other 4' do
+        get '/v1/posts', :headers => @auth_headers
+        json = JSON.parse(response.body)["data"]
+        json.each do |data|
+          if data["id"].to_i == @media_attached_comparable.id
+            expect(data["attributes"]["media"]).to eq(rails_blob_path(@media_attached_comparable.media))
+          else
+            expect(data["attributes"]["media"]).to eq(nil)
+          end
+        end
+      end
     end
     context "GET /events/:id Events#show" do
       before do
@@ -65,6 +82,7 @@ RSpec.describe "Events API", type: :request do
         FactoryBot.create(:event_rsvp, event_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)
         FactoryBot.create_list(:comment, 2, commentable_type: "Event", commentable_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)
         FactoryBot.create(:reaction, interaction_type: "Event", interaction_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)
+        @comparable.media.attach(io: File.open(@image_file), filename: @image_filename, content_type: @image_content_type)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -80,7 +98,7 @@ RSpec.describe "Events API", type: :request do
         expect(json["data"]["id"].to_i).to eq(@comparable.id)
         expect(actual["title"]).to eq(@comparable.title)
         expect(actual["description"]).to eq(@comparable.description)
-        expect(actual["attachment"]).to eq(@comparable.attachment)
+        expect(actual["media"]).to eq(rails_blob_path(@comparable.media))
         expect(actual["potluck"]).to eq(@comparable.potluck)
         expect(actual["event-allday"]).to eq(@comparable.event_allday)
         expect(actual["event-start"].to_datetime).to eq(@comparable.event_start.to_datetime)
@@ -171,7 +189,8 @@ RSpec.describe "Events API", type: :request do
               "family_id": @comparable.family_id,
               "member_id": @comparable.member_id,
               "event_start": @comparable.event_start,
-              "event_end": @comparable.event_end
+              "event_end": @comparable.event_end,
+              "media": @image_file
             }
           }
         }
@@ -182,7 +201,8 @@ RSpec.describe "Events API", type: :request do
               "description": @comparable.description,
               "location": @comparable.location,
               "family_id": @comparable.family_id,
-              "member_id": @comparable.member_id
+              "member_id": @comparable.member_id,
+              "media": @image_file
             }
           }
         }
@@ -206,6 +226,7 @@ RSpec.describe "Events API", type: :request do
         expect(actual["member-id"]).to eq(@comparable.member_id)
         expect(actual["event-start"].to_datetime).to eq(@comparable.event_start.to_datetime)
         expect(actual["event-end"].to_datetime).to eq(@comparable.event_end.to_datetime)
+        expect(actual["media"]).to eq(rails_blob_path(Event.find(json["data"]["id"]).media))
       end
       it 'and without date input it defaults to current day' do
         post '/v1/events', :params => @create_request_params_without_dates, :headers => @auth_headers
@@ -218,6 +239,7 @@ RSpec.describe "Events API", type: :request do
         expect(actual["member-id"]).to eq(@comparable.member_id)
         expect(actual["event-start"].to_datetime).to eq(DateTime.parse("#{Date.today} 00:00:00"))
         expect(actual["event-end"].to_datetime).to eq(DateTime.parse("#{Date.today} 23:59:59"))
+        expect(actual["media"]).to eq(rails_blob_path(Event.find(json["data"]["id"]).media))
       end
       it 'shows the relationships and links to them in the json package' do
         post '/v1/events', :params => @create_request_params, :headers => @auth_headers
@@ -264,7 +286,7 @@ RSpec.describe "Events API", type: :request do
               "title": update.title,
               "description": update.description,
               "location": update.location,
-              "attachment": update.attachment,
+              "media": @image_file,
               "locked": update.locked,
               "created_at": update.created_at,
               "updated_at": update.updated_at
@@ -276,7 +298,8 @@ RSpec.describe "Events API", type: :request do
           "event": {
             "id": @comparable.id,
             "attributes": {
-              "title": update.title
+              "title": update.title,
+              "media": @image_file
             }
           }
         }
@@ -292,7 +315,7 @@ RSpec.describe "Events API", type: :request do
         expect(actual["location"]).to eq(expected[:location])
         expect(actual["family-id"]).to eq(expected[:family_id])
         expect(actual["member-id"]).to eq(expected[:member_id])
-        expect(actual["attachment"]).to eq(expected[:attachment])
+        expect(actual["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual["description"]).to eq(expected[:description])
         expect(actual["created-at"].to_datetime).to_not eq(expected[:created_at])
         expect(actual["updated-at"].to_datetime).to_not eq(expected[:updated_at])
@@ -307,7 +330,7 @@ RSpec.describe "Events API", type: :request do
         expect(actual["id"].to_i).to eq(@comparable.id)
         expect(actual["attributes"]["title"]).to eq(expected[:title])
         expect(actual["attributes"]["description"]).to eq(@comparable.description)
-        expect(actual["attributes"]["attachment"]).to eq(@comparable.attachment)
+        expect(actual["attributes"]["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual["attributes"]["locked"]).to eq(@comparable.locked)
         expect(actual["attributes"]["family-id"]).to eq(@comparable.family_id)
         expect(actual["attributes"]["member-id"]).to eq(@comparable.member_id)
@@ -332,6 +355,15 @@ RSpec.describe "Events API", type: :request do
         expect(actual).to include("comments")
         expect(actual).to include("member")
         expect(actual).to include("event-rsvps")
+      end
+      it 'can patch a single media file' do
+        file_upload_params = {:event => {:attributes => {:media => @image_file}}}
+        expect(@comparable.media.attached?).to_not eq(true)
+        patch "/v1/events/#{@comparable.id}", :params => file_upload_params, :headers => @auth_headers
+        expect(response).to have_http_status(200)
+        json = JSON.parse(response.body)["data"]["attributes"]["media"]
+        expect(@comparable.reload.media.attached?).to eq(true)
+        expect(rails_blob_path(@comparable.reload.media)).to eq(json)
       end
     end
     context "DELETE /events/:id Events#destroy" do
@@ -377,7 +409,7 @@ RSpec.describe "Events API", type: :request do
                 "title": @updates[:title],
                 "location": @updates[:location],
                 "description": @updates[:description],
-                "attachment": @updates[:attachment],
+                "media": @image_file,
                 "locked": @updates[:locked],
                 "updated_at": @updates[:updated_at]
               }
@@ -386,6 +418,7 @@ RSpec.describe "Events API", type: :request do
 
           put "/v1/events/#{@comparable.id}", :params => unauthorized_update_put_request_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
+          expect(ActiveStorage::Attachment.all).to be_empty
         end
         it "unable to #patch update on another family member's post" do
           unauthorized_patch_of_post_params = {
@@ -397,6 +430,7 @@ RSpec.describe "Events API", type: :request do
 
           patch "/v1/events/#{@comparable.id}", :params => unauthorized_patch_of_post_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
+          expect(ActiveStorage::Attachment.all).to be_empty
         end
         it "unable to #patch update on a protected field" do
           update_patch_request_unpermitted_params = {
@@ -466,7 +500,7 @@ RSpec.describe "Events API", type: :request do
             "title": update.title,
             "description": update.description,
             "location": update.location,
-            "attachment": update.attachment,
+            "media": @image_file,
             "locked": update.locked,
             "created_at": update.created_at,
             "updated_at": update.updated_at
@@ -478,7 +512,8 @@ RSpec.describe "Events API", type: :request do
         "event": {
           "id": @comparable.id,
           "attributes": {
-            "title": update.title
+            "title": update.title,
+            "media": @image_file
           }
         }
       }
@@ -495,7 +530,7 @@ RSpec.describe "Events API", type: :request do
         expect(actual["location"]).to eq(expected[:location])
         expect(actual["family-id"]).to eq(@comparable.family_id) # actual vs expected tested in Unauthorized to Family
         expect(actual["member-id"]).to eq(@comparable.member_id)
-        expect(actual["attachment"]).to eq(expected[:attachment])
+        expect(actual["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual["description"]).to eq(expected[:description])
         expect(actual["created-at"]).to_not eq(expected[:created_at])
         expect(actual["updated-at"]).to_not eq(expected[:updated_at])
@@ -512,7 +547,7 @@ RSpec.describe "Events API", type: :request do
         expect(actual["location"][1]).to be_within(0.000000000009).of(@comparable.location[1])
         expect(actual["family-id"]).to eq(@comparable.family_id) # actual vs expected tested in Unauthorized to Family
         expect(actual["member-id"]).to eq(@comparable.member_id)
-        expect(actual["attachment"]).to eq(@comparable.attachment)
+        expect(actual["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual["description"]).to eq(@comparable.description)
         expect(actual["created-at"]).to_not eq(@comparable.created_at)
         expect(actual["updated-at"]).to_not eq(@comparable.updated_at)
@@ -596,7 +631,8 @@ RSpec.describe "Events API", type: :request do
               "family_id": @comparable.family_id,
               "member_id": @comparable.member_id,
               "event_start": @comparable.event_start,
-              "event_end": @comparable.event_end
+              "event_end": @comparable.event_end,
+              "media": @image_file
             }
           }
         }
@@ -607,6 +643,7 @@ RSpec.describe "Events API", type: :request do
       it "unable to create a post in another family" do
         post "/v1/events", :params => @create_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
     end
     context "PUT-PATCH /events Events#update" do
@@ -626,7 +663,7 @@ RSpec.describe "Events API", type: :request do
               "title": update.title,
               "location": update.location,
               "description": update.description,
-              "attachment": update.attachment,
+              "media": @image_file,
               "locked": update.locked,
               "created_at": update.created_at,
               "updated_at": update.updated_at
@@ -638,7 +675,8 @@ RSpec.describe "Events API", type: :request do
           "event": {
             "id": @comparable.id,
             "attributes": {
-              "title": update.title
+              "title": update.title,
+              "media": @image_file
             }
           }
         }
@@ -646,10 +684,12 @@ RSpec.describe "Events API", type: :request do
       it "returns 403 error for an unauthorized update put" do
         put "/v1/events/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
       it 'returns 403 error for an unauthorized update patch' do
         patch "/v1/events/#{@comparable.id}", :params => @update_patch_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
     end
     context "DELETE /events Events#destroy" do
@@ -699,12 +739,15 @@ RSpec.describe "Events API", type: :request do
               "family_id": comparable_for_create.family_id,
               "member_id": comparable_for_create.member_id,
               "event_start": comparable_for_create.event_start,
-              "event_end": comparable_for_create.event_end
+              "event_end": comparable_for_create.event_end,
+              "media": @image_file
             }
           }
         }
         post "/v1/events", :params => @comparable_for_create
         expect(response).to have_http_status(401)
+        expect(ActiveStorage::Attachment.all).to be_empty
+        
       end
     end
     context "PUT-PATCH /events Events#update" do
@@ -721,7 +764,7 @@ RSpec.describe "Events API", type: :request do
               "title": update.title,
               "location": update.location,
               "description": update.description,
-              "attachment": update.attachment,
+              "media": @image_file,
               "locked": update.locked,
               "created_at": update.created_at,
               "updated_at": update.updated_at
@@ -733,7 +776,8 @@ RSpec.describe "Events API", type: :request do
           "event": {
             "id": @comparable.id,
             "attributes": {
-              "title": update.title
+              "title": update.title,
+              "media": @image_file
             }
           }
         }
@@ -741,10 +785,12 @@ RSpec.describe "Events API", type: :request do
       it "#put returns a 401 error saying they are not authenticated" do
         put "/v1/events/#{@comparable.id}", :params => @update_put_request_params
         expect(response).to have_http_status(401)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
       it "#patch returns a 401 error saying they are not authenticated" do
         patch "/v1/events/#{@comparable.id}", :params => @update_patch_request_params
         expect(response).to have_http_status(401)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
     end
     context "DELETE /events Events#destroy" do

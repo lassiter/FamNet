@@ -3,11 +3,15 @@ require 'rails_helper'
 RSpec.shared_examples_for "media" do
   let(:model) { described_class } # the class that includes the concern
   before do
+    @family = FactoryBot.create(:family)
+    @member = FactoryBot.create(:family_member, family_id: @family.id).member
     if described_class == Comment
       parent = FactoryBot.create(:post)
       @media_subject = FactoryBot.build(:comment, commentable_id: parent.id, commentable_type: "Post", member_id: parent.member_id)
+    elsif described_class == Recipe
+      @media_subject = FactoryBot.build(:"#{described_class.to_s.downcase}", member_id: @member.id)
     else
-      @media_subject = FactoryBot.build(:"#{described_class.to_s.downcase}")
+      @media_subject = FactoryBot.build(:"#{described_class.to_s.downcase}", member_id: @member.id, family_id: @family.id)
     end
   end
   context "Basic Model Tests for #{described_class}'s media attachments" do

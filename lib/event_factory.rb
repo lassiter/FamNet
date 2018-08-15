@@ -8,7 +8,6 @@ class EventFactory
       @description = @event["description"]
       @member = Member.find(@event["member_id"])
       @family = Family.find(@event["family_id"])
-      !@event["attachment"].present? ? @attachment = nil : @attachment = @event["attachment"]
       !@event["location"].present? ? @location = nil : @location = @event["location"]
       !@event["potluck"].present? ? @potluck = false : @potluck = @event["potluck"]
       !@event["locked"].present? ? @locked = false : @locked = @event["locked"]
@@ -51,7 +50,6 @@ class EventFactory
       description: @description, # text
       member_id: @member.id,
       family_id: @family.id,
-      attachment: @attachment,
       event_start: @event_start, 
       event_end: @event_end, 
       event_allday: @event_allday, 

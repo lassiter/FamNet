@@ -79,7 +79,6 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
   create_table "events", force: :cascade do |t|
     t.string "title", null: false
     t.text "description"
-    t.binary "attachment"
     t.datetime "event_start", null: false
     t.datetime "event_end"
     t.boolean "event_allday", default: false

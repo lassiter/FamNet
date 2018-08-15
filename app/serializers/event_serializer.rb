@@ -3,7 +3,11 @@ class EventSerializer < ActiveModel::Serializer
 
   type 'event'
 
-  attributes :id, :title, :description, :attachment, :event_start, :event_end, :event_allday, :location, :potluck, :locked, :family_id, :member_id, :created_at, :updated_at
+  attributes :id, :title, :description, :media, :event_start, :event_end, :event_allday, :location, :potluck, :locked, :family_id, :member_id, :created_at, :updated_at
+
+  def media # Required to avoid n+1 serialization failures.
+    object.media.attached? ? rails_blob_path(object.media) : nil
+  end
 
   link(:self) { api_v1_event_path(id: object.id) }
 

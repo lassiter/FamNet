@@ -2,7 +2,6 @@ FactoryBot.define do
   factory :event do
     title { Faker::Lorem.sentence }
     description { Faker::Lorem.paragraph(2, false, 4) }
-    attachment { Faker::Name.last_name }
     event_start { Faker::Date.forward(5.days) }
     event_end { Faker::Date.forward(5.days) }
     event_allday { [true, false].sample }

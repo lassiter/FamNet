@@ -53,7 +53,7 @@ class API::V1::RecipesController < ApplicationController
       @recipe = RecipeFactory.new(recipe_params.except(:media)).result
       authorize @recipe
       if @recipe.save
-        @recipe.media.attach(recipe_params[:attributes][:media])
+        @recipe.media.attach(recipe_params[:attributes][:media]) if recipe_params[:attributes][:media].present?
         # Callback to have access to @recipe.id to create join_tables.
         RecipeFactory.new(recipe_params.except(:media)).factory_callback(@recipe.id)
         render json: @recipe, serializer: RecipeSerializer, adapter: :json_api

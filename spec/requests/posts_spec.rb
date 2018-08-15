@@ -387,7 +387,6 @@ RSpec.describe "Post API", type: :request do
           }
           patch "/v1/posts/#{@comparable.id}", :params => update_patch_request_unpermitted_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
-          expect(ActiveStorage::Attachment.all).to be_empty
         end
         it "unable to #put update on a protected field" do
           update_put_request_unpermitted_params = {
@@ -404,7 +403,6 @@ RSpec.describe "Post API", type: :request do
           }
           put "/v1/posts/#{@comparable.id}", :params => update_put_request_unpermitted_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
-          expect(ActiveStorage::Attachment.all).to be_empty
         end
       end
       context "DELETE /posts Posts#delete :: Member 2 => Member 1" do
@@ -574,7 +572,8 @@ RSpec.describe "Post API", type: :request do
               "body": @comparable.body,
               "location": @comparable.location,
               "family_id": @comparable.family_id,
-              "member_id": @comparable.member_id
+              "member_id": @comparable.member_id,
+              "media": @image_file
             }
           }
         }
