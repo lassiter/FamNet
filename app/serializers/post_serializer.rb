@@ -2,16 +2,12 @@ class PostSerializer < ActiveModel::Serializer
   include Rails.application.routes.url_helpers
 
   type 'post'
-  attributes :id, :family_id, :member_id, :body, :location, :edit, :attachment, :locked, :created_at, :updated_at
-  # link :links do
-  #   id = object.id
-  #   member_id = object.member.id
-  #   {
-  #     self: api_v1_post_path(id),
-  #     comments: api_v1_post_comments_path(id),
-  #     member: api_v1_member_path(member_id)
-  #   }
-  # end
+  attributes :id, :family_id, :member_id, :body, :location, :media, :edit, :locked, :created_at, :updated_at
+
+  def media # Required to avoid n+1 serialization failures.
+    object.media.attached? ? rails_blob_path(object.media) : nil
+  end
+
   link(:self) { api_v1_post_path(id: object.id) }
   link(:comments) { api_v1_post_comments_path(object.id) }
   link(:member) { api_v1_member_path(id: object.member.id) }

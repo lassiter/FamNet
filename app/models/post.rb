@@ -6,6 +6,7 @@ class Post < ApplicationRecord
 
   belongs_to :family
   belongs_to :member
+  has_one_attached :media
 
   validate :validate_location
   validates :body, length: { minimum: 1 }, format: { with: /[A-Za-z\u00C0-\u00D6\u00D8-\u00f6\u00f8-\u00ff\s"'-.!?;]+/, message: "only allows letters and \"'-.!?;" }

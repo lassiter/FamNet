@@ -10,6 +10,7 @@ RSpec.describe Post, type: :model do
   end
   it_behaves_like 'notifiable'
   it_behaves_like 'interaction'
+  it_behaves_like 'media'
   describe "valid" do
     before do
      @member_id = FactoryBot.create(:family_member, authorized_at: DateTime.now).member_id
