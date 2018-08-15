@@ -228,7 +228,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_relationships).to include("tags")
         expect(actual_relationships).to include("ingredients")
 
-        expect(actual_links["self"]).to eq(Rails.application.routes.url_helpers.api_v1_recipes_url(id: actual["id"]))
+        expect(actual_links["self"]).to eq(Rails.application.routes.url_helpers.api_v1_recipes_path(id: actual["id"]))
       end
     end
     context "GET /recipes Recipes#show" do
