@@ -157,13 +157,11 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
     t.string "unconfirmed_email"
     t.string "name"
     t.string "nickname"
-    t.string "image"
     t.string "email"
     t.text "tokens"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "surname"
-    t.binary "image_store"
     t.json "contacts", default: "{}"
     t.json "addresses", default: "{}"
     t.integer "gender"

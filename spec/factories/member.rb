@@ -11,8 +11,6 @@ FactoryBot.define do
     factory :member_profile do
     
       nickname { Faker::Name.first_name }
-      image { "http://example.com/foobar/boobar/barbaz.jpg" }
-      image_store { nil }
       # samples two schemas
       contacts { [{cell: Faker::PhoneNumber.cell_phone,home: Faker::PhoneNumber.cell_phone,work: Faker::PhoneNumber.cell_phone}, {cell: Faker::PhoneNumber.cell_phone}].sample }
       # samples two schemas

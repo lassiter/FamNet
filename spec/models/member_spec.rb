@@ -77,4 +77,37 @@ RSpec.describe Member, type: :model do
       end
     end
   end
+  describe 'Avatar validation' do
+    describe ':: Attaching' do
+      before(:each) do
+        @avatar_subject = FactoryBot.build(:member)
+      end
+      it 'saves the image' do
+        @avatar_subject.save!        
+        expect(@avatar_subject.avatar).to_not be_attached
+        @avatar_subject.avatar.attach(io: File.open(Rails.root.to_s + "/spec/fixtures/images/img.jpg"), filename: "img.jpg", content_type: "image/jpg")
+        expect(@avatar_subject.avatar.instance_of?(ActiveStorage::Attached::One)).to be_truthy
+        expect(@avatar_subject.avatar).to be_attached
+      end
+      it "the attachment record should match #{described_class.to_s.downcase}'s record'" do
+        @avatar_subject.save!        
+        @avatar_subject.avatar.attach(io: File.open(Rails.root.to_s + "/spec/fixtures/images/img.jpg"), filename: "img.jpg", content_type: "image/jpg")
+        expect(@avatar_subject.avatar.attachment.record_id).to eq(@avatar_subject.id)
+        expect(@avatar_subject.avatar.attachment.record_type).to eq(@avatar_subject.class.to_s)
+        expect(@avatar_subject.avatar.blob.instance_of?(ActiveStorage::Blob)).to be_truthy
+      end
+    end
+    describe ':: Validations' do
+      it 'should be valid without avatar and have a default avatar' do
+        subject = FactoryBot.build(:member, avatar: nil)
+        expect(subject).to be_valid
+        expect(subject.avatar.attached?).to be_falsey
+      end
+      it 'should be valid with avatar' do
+        subject = FactoryBot.build(:member, avatar: fixture_file_upload(Rails.root.to_s + '/spec/fixtures/images/img.jpg', 'img/jpg'))
+        expect(subject).to be_valid
+        expect(subject.avatar.attached?).to be_truthy
+      end
+    end
+  end
 end
