@@ -17,4 +17,3 @@ class DirectoryMemberSerializer < ActiveModel::Serializer
     end
   end
 end
-# puts JSON.pretty_generate(DirectoryMemberSerializer.new(m).serializable_hash)

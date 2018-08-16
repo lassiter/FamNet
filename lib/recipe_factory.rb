@@ -33,8 +33,8 @@ class RecipeFactory
   
   def result
     Recipe.new({
-      title: @title, # string
-      description: @description, # text
+      title: @title,
+      description: @description,
       member_id: @member.id,
       steps: @steps.to_h,
       ingredients_list: @ingredients_object_array.map {|ingredient| ingredient.title},

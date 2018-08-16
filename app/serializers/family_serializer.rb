@@ -7,4 +7,3 @@ class FamilySerializer < ActiveModel::Serializer
 
   link(:self) { api_v1_family_path(id: object.id) }
 end
-# puts JSON.pretty_generate(FamilySerializer.new(f).serializable_hash)
