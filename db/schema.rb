@@ -53,7 +53,6 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
     t.string "commentable_type", null: false
     t.bigint "commentable_id", null: false
     t.integer "member_id"
-    t.binary "attachment"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["commentable_type", "commentable_id"], name: "index_comments_on_commentable_type_and_commentable_id"
@@ -80,7 +79,6 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
   create_table "events", force: :cascade do |t|
     t.string "title", null: false
     t.text "description"
-    t.binary "attachment"
     t.datetime "event_start", null: false
     t.datetime "event_end"
     t.boolean "event_allday", default: false
@@ -159,13 +157,11 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
     t.string "unconfirmed_email"
     t.string "name"
     t.string "nickname"
-    t.string "image"
     t.string "email"
     t.text "tokens"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "surname"
-    t.binary "image_store"
     t.json "contacts", default: "{}"
     t.json "addresses", default: "{}"
     t.integer "gender"
@@ -191,10 +187,9 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
   end
 
   create_table "posts", force: :cascade do |t|
-    t.text "body", null: false
+    t.text "body"
     t.float "location", array: true
     t.text "edit"
-    t.binary "attachment"
     t.boolean "locked", default: false
     t.bigint "family_id"
     t.bigint "member_id"
@@ -237,17 +232,12 @@ ActiveRecord::Schema.define(version: 2018_07_09_214107) do
     t.string "title", null: false
     t.text "description"
     t.json "steps"
-    t.binary "attachment"
     t.text "ingredients_list", array: true
     t.text "tags_list", array: true
     t.bigint "member_id"
-    t.bigint "tag_id"
-    t.bigint "ingredient_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["ingredient_id"], name: "index_recipes_on_ingredient_id"
     t.index ["member_id"], name: "index_recipes_on_member_id"
-    t.index ["tag_id"], name: "index_recipes_on_tag_id"
   end
 
   create_table "tags", force: :cascade do |t|

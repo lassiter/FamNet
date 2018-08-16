@@ -8,6 +8,7 @@ RSpec.describe Comment, type: :model do
     it { should belong_to(:commentable) }
     it { should belong_to(:member) }
   end
+  it_behaves_like 'media'
   it_behaves_like 'notifiable'
   it_behaves_like 'interaction'
   describe "Post Subject" do
@@ -24,10 +25,6 @@ RSpec.describe Comment, type: :model do
       describe ":: nils" do
         it "all nils should be valid :: edit" do
           comment = FactoryBot.build(:comment, commentable_type: @subject_class, commentable_id: @subject.id, member_id: @member_id, edit: nil)
-          expect(comment).to be_valid
-        end
-        it "all nils should be valid :: attachment" do
-          comment = FactoryBot.build(:comment, commentable_type: @subject_class, commentable_id: @subject.id, member_id: @member_id, attachment: nil)
           expect(comment).to be_valid
         end
       end
@@ -65,10 +62,6 @@ RSpec.describe Comment, type: :model do
         end
         it "all emptys should be invalid :: commentable_id" do
           comment = Comment.new(commentable_id: "")
-          expect(comment).to_not be_valid
-        end
-        it "all emptys should be invalid :: attachment" do
-          comment = Comment.new(attachment: "")
           expect(comment).to_not be_valid
         end
         it "all emptys should be invalid :: member_id" do
@@ -94,10 +87,6 @@ RSpec.describe Comment, type: :model do
           comment = FactoryBot.build(:comment, commentable_type: @subject_class, commentable_id: @subject.id, member_id: @member_id, edit: nil)
           expect(comment).to be_valid
         end
-        it "all nils should be valid :: attachment" do
-          comment = FactoryBot.build(:comment, commentable_type: @subject_class, commentable_id: @subject.id, member_id: @member_id, attachment: nil)
-          expect(comment).to be_valid
-        end
       end
     end
     describe "invalid" do
@@ -133,10 +122,6 @@ RSpec.describe Comment, type: :model do
         end
         it "all emptys should be invalid :: commentable_id" do
           comment = Comment.new(commentable_id: "")
-          expect(comment).to_not be_valid
-        end
-        it "all emptys should be invalid :: attachment" do
-          comment = Comment.new(attachment: "")
           expect(comment).to_not be_valid
         end
         it "all emptys should be invalid :: member_id" do
@@ -162,10 +147,6 @@ RSpec.describe Comment, type: :model do
           comment = FactoryBot.build(:comment, commentable_type: @subject_class, commentable_id: @subject.id, member_id: @member_id, edit: nil)
           expect(comment).to be_valid
         end
-        it "all nils should be valid :: attachment" do
-          comment = FactoryBot.build(:comment, commentable_type: @subject_class, commentable_id: @subject.id, member_id: @member_id, attachment: nil)
-          expect(comment).to be_valid
-        end
       end
     end
     describe "invalid" do
@@ -203,15 +184,29 @@ RSpec.describe Comment, type: :model do
           comment = Comment.new(commentable_id: "")
           expect(comment).to_not be_valid
         end
-        it "all emptys should be invalid :: attachment" do
-          comment = Comment.new(attachment: "")
-          expect(comment).to_not be_valid
-        end
         it "all emptys should be invalid :: member_id" do
           comment = Comment.new(member_id: "")
           expect(comment).to_not be_valid
         end
       end
+    end
+  end
+  describe 'body - media validation' do
+    before do
+      @family_member = FactoryBot.create(:family_member, authorized_at: DateTime.now)
+      @member_id = @family_member.member_id
+      @subject = FactoryBot.create(:post, family_id: @family_member.family_id, member_id: @member_id)
+      @subject_class = @subject.class.to_s
+    end
+    it 'should not be valid if body is missing and media is missing' do
+      subject = FactoryBot.build(:comment, body: nil, media: nil, commentable_type: @subject_class, commentable_id: @subject.id, member_id: @member_id)
+      expect(subject).to_not be_valid
+      expect(subject.media.attached?).to be_falsey
+    end
+    it 'should be valid if media is present and body is not' do
+      subject = FactoryBot.build(:comment, body: nil, media: fixture_file_upload(Rails.root.to_s + '/spec/fixtures/images/img.jpg', 'img/jpg'), commentable_type: @subject_class, commentable_id: @subject.id, member_id: @member_id)
+      expect(subject).to be_valid
+      expect(subject.media.attached?).to be_truthy
     end
   end
 end

@@ -36,12 +36,7 @@ class API::V1::CommentsController < ApplicationController
       @comment = Comment.new(comment_params)
       authorize @comment
       if @comment.save
-        # @notification = Notification.new(notifiable_type: "Comment", notifiable_id: @comment.id, member_id: comment_params[:member_id].to_i)
-        # if @notification.save
         render json: @comment, serializer: CommentSerializer, adapter: :json_api
-        # else
-        #   render json: {comment: @comment, errors: @notification.errors.full_messages }
-        # end
       else
         render json: { errors: @comment.errors.full_messages }, status: :unprocessable_entity
       end
@@ -55,8 +50,7 @@ class API::V1::CommentsController < ApplicationController
     begin
       @comment = Comment.find(params[:id])
       authorize @comment
-      @comment.assign_attributes(comment_params)
-
+      @comment.assign_attributes(comment_params["attributes"])
       if @comment.save
         render json: @comment, serializer: CommentSerializer, adapter: :json_api
       else
@@ -96,6 +90,6 @@ class API::V1::CommentsController < ApplicationController
       end
     end
     def comment_params
-      params.require(:comment).permit(:attributes =>[:body, :attachment, :member_id, :commentable_id, :commentable_type])
+      params.require(:comment).permit(:attributes =>[:body, :member_id, :commentable_id, :commentable_type, :media])
     end
 end

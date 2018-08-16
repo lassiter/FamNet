@@ -27,7 +27,7 @@ class API::V1::PostsController < ApplicationController
       @post = Post.new(post_params)
       authorize @post
       if @post.save
-        render json: @post
+        render json: @post, serializer: PostSerializer, adapter: :json_api
       else
         render json: { errors: @post.errors.full_messages }, status: :unprocessable_entity
       end
@@ -44,7 +44,7 @@ class API::V1::PostsController < ApplicationController
         authorize @post
         @post.assign_attributes(update_params)
         if @post.save
-          render json: @post
+          render json: @post, serializer: PostSerializer, adapter: :json_api
         else
           render json: { errors: @post.errors.full_messages }, status: :unprocessable_entity
         end
@@ -90,9 +90,9 @@ class API::V1::PostsController < ApplicationController
 
   private
     def post_params
-      params.require(:post).permit(:id, :attributes => [:body, { :location => [] }, :attachment, :locked, :family_id, :member_id])
+      params.require(:post).permit(:id, :attributes => [:body, :media, { :location => [] }, :attachment, :locked, :family_id, :member_id])
     end
     def update_params
-      params.require(:post).permit(:id, :attributes => [:body, { :location => [] }, :attachment, :locked])
+      params.require(:post).permit(:id, :attributes => [:body, :media, { :location => [] }, :attachment, :locked])
     end
 end

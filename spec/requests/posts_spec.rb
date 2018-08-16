@@ -5,6 +5,9 @@ RSpec.describe "Post API", type: :request do
     family_member = FactoryBot.create(:family_member, family_id: @family.id, authorized_at: DateTime.now)
     @member = family_member.member
     @member_family_id = family_member.family_id
+    @image_file = fixture_file_upload(Rails.root.to_s + '/spec/fixtures/images/img.jpg', 'img/jpg')
+    @image_filename = 'img.jpg'
+    @image_content_type = 'image/jpg'
   end
   describe ':: Members / Same Family ::' do
     before do
@@ -14,6 +17,8 @@ RSpec.describe "Post API", type: :request do
       before do
         5.times { FactoryBot.create(:post, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id, ).member_id ) }
         @comparable = Post.where(family_id: @member.families.ids)
+        @media_attached_comparable = @comparable.first
+        @media_attached_comparable.media.attach(io: File.open(@image_file), filename: @image_filename, content_type: @image_content_type)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -26,9 +31,10 @@ RSpec.describe "Post API", type: :request do
         get '/v1/posts', :headers => @auth_headers
 
         json = JSON.parse(response.body) 
-        expected = @comparable.first
-        actual = json["data"].first
-        expect(actual["id"].to_i).to eq(expected.id)
+        expected = @comparable.pluck(:id).sort
+        actual = []
+        json["data"].each {|data| actual << data["id"].to_i}
+        expect(actual.sort.first).to eq(expected.first)
         expect(json["data"].count).to eq(@comparable.count)
         expect(response).to have_http_status(200)
       end
@@ -56,12 +62,24 @@ RSpec.describe "Post API", type: :request do
         expect(actual).to include("comments")
         expect(actual).to include("member")
       end
+      it 'the serializer should attach the blob path or return nil for other 4' do
+        get '/v1/posts', :headers => @auth_headers
+        json = JSON.parse(response.body)["data"]
+        json.each do |data|
+          if data["id"].to_i == @media_attached_comparable.id
+            expect(data["attributes"]["media"]).to eq(rails_blob_path(@media_attached_comparable.media))
+          else
+            expect(data["attributes"]["media"]).to eq(nil)
+          end
+        end
+      end
     end
     context "GET /posts/:id Posts#show" do
       before do
         @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id )
         FactoryBot.create_list(:comment, 2, commentable_type: "Post", commentable_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)
         FactoryBot.create(:reaction, interaction_type: "Post", interaction_id: @comparable.id, member_id: FactoryBot.create(:family_member, family_id: @member_family_id ).member_id)
+        @comparable.media.attach(io: File.open(@image_file), filename: @image_filename, content_type: @image_content_type)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -71,13 +89,13 @@ RSpec.describe "Post API", type: :request do
 
         json = JSON.parse(response.body)
         actual = json["data"]["attributes"]
-
+        expect(@comparable.media.attached?).to be_truthy
 
         expect(response).to have_http_status(200)
         expect(json["data"]["id"].to_i).to eq(@comparable.id)
         expect(actual["body"]).to eq(@comparable.body)
         expect(actual["edit"]).to eq(@comparable.edit)
-        expect(actual["attachment"]).to eq(@comparable.attachment)
+        expect(actual["media"]).to eq(rails_blob_path(@comparable.media))
         expect(actual["locked"]).to eq(@comparable.locked)
         expect(actual["family-id"]).to eq(@comparable.family_id)
         expect(actual["member-id"]).to eq(@comparable.member_id)
@@ -132,7 +150,6 @@ RSpec.describe "Post API", type: :request do
         expect(actual_reaction_links["related"]).to include("reactions","#{@comparable.id}")
 
         expect(actual_comment_links["related"]).to include("comments","#{@comparable.id}")
-        
 
       end
       it 'shows default includes to ' do
@@ -143,14 +160,9 @@ RSpec.describe "Post API", type: :request do
           expect(actual).to include("type")
           expect(actual).to include("attributes")
           if expect(actual).to include("attributes")
-            
-              expect(actual["attributes"]).to include("links") unless actual["type"] == "reaction"
+            expect(actual["attributes"]).to include("links") unless actual["type"] == "reaction"
           end
         end
-
-        # expect(actual).to include("reactions")
-        # expect(actual).to include("comments")
-        # expect(actual).to include("member")
       end
     end
     context "POST /posts Posts#create" do
@@ -162,10 +174,12 @@ RSpec.describe "Post API", type: :request do
               "body": @comparable.body,
               "location": @comparable.location,
               "family_id": @comparable.family_id,
-              "member_id": @comparable.member_id
+              "member_id": @comparable.member_id,
+              "media": @image_file
             }
           }
         }
+
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -179,9 +193,9 @@ RSpec.describe "Post API", type: :request do
         
         json = JSON.parse(response.body)
         actual = json["data"]["attributes"]
-
         expect(response).to have_http_status(200)
         expect(actual["body"]).to eq(@comparable.body)
+        expect(actual["media"]).to eq(rails_blob_path(Post.find(json["data"]["id"]).media))
         expect(actual["location"][0]).to be_within(0.000000000009).of(@comparable.location[0])
         expect(actual["location"][1]).to be_within(0.000000000009).of(@comparable.location[1])
         expect(actual["family-id"]).to eq(@comparable.family_id)
@@ -201,8 +215,7 @@ RSpec.describe "Post API", type: :request do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
         @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: @member.id )
-        update_put = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
-        update_patch = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
+        update = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
         @update_put_request_params = {
           "id": @comparable.id,
           "post": {
@@ -210,13 +223,13 @@ RSpec.describe "Post API", type: :request do
             "attributes": {
               "family_id": @comparable.family_id,
               "member_id": @comparable.member_id,
-              "body": update_put.body,
-              "location": update_put.location,
-              "edit": update_put.edit,
-              "attachment": update_put.attachment,
-              "locked": update_put.locked,
-              "created_at": update_put.created_at,
-              "updated_at": update_put.updated_at
+              "body": update.body,
+              "location": update.location,
+              "edit": update.edit,
+              "media": @image_file,
+              "locked": update.locked,
+              "created_at": update.created_at,
+              "updated_at": update.updated_at
             }
           }
         }
@@ -225,7 +238,8 @@ RSpec.describe "Post API", type: :request do
           "post": {
             "id": @comparable.id,
             "attributes": {
-              "body": update_patch.body
+              "body": update.body,
+              "media": @image_file
             }
           }
         }
@@ -242,12 +256,12 @@ RSpec.describe "Post API", type: :request do
         expect(actual["location"]).to eq(expected[:location])
         expect(actual["family-id"]).to eq(expected[:family_id])
         expect(actual["member-id"]).to eq(expected[:member_id])
-        expect(actual["attachment"]).to eq(expected[:attachment])
+        expect(actual["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual["edit"]).to eq(expected[:edit])
         expect(actual["created-at"].to_datetime).to_not eq(expected[:created_at])
         expect(actual["updated-at"].to_datetime).to_not eq(expected[:updated_at])
       end
-      it "#patch 200 status and can replace a single attribute and it returns the json for the patched post" do
+      it "#patch 200 status and can replace a select set of attributes and it returns the json for the patched post" do
         patch "/v1/posts/#{@comparable.id}", :params => @update_patch_request_params, :headers => @auth_headers
         expected = @update_patch_request_params[:post][:attributes]
         
@@ -257,7 +271,7 @@ RSpec.describe "Post API", type: :request do
         expect(actual["id"].to_i).to eq(@comparable.id)
         expect(actual["attributes"]["body"]).to eq(expected[:body])
         expect(actual["attributes"]["edit"]).to eq(@comparable.edit)
-        expect(actual["attributes"]["attachment"]).to eq(@comparable.attachment)
+        expect(actual["attributes"]["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual["attributes"]["locked"]).to eq(@comparable.locked)
         expect(actual["attributes"]["family-id"]).to eq(@comparable.family_id)
         expect(actual["attributes"]["member-id"]).to eq(@comparable.member_id)
@@ -280,6 +294,15 @@ RSpec.describe "Post API", type: :request do
         expect(actual).to include("reactions")
         expect(actual).to include("comments")
         expect(actual).to include("member")
+      end
+      it 'can patch a single media file' do
+        file_upload_params = {:post => {:attributes => {:media => @image_file}}}
+        expect(@comparable.media.attached?).to_not eq(true)
+        patch "/v1/posts/#{@comparable.id}", :params => file_upload_params, :headers => @auth_headers
+        expect(response).to have_http_status(200)
+        json = JSON.parse(response.body)["data"]["attributes"]["media"]
+        expect(@comparable.reload.media.attached?).to eq(true)
+        expect(rails_blob_path(@comparable.reload.media)).to eq(json)
       end
     end
     context "DELETE /posts/:id Posts#destroy" do
@@ -325,7 +348,7 @@ RSpec.describe "Post API", type: :request do
                 "body": @updates[:body],
                 "location": @updates[:location],
                 "edit": @updates[:edit],
-                "attachment": @updates[:attachment],
+                "media": @image_file,
                 "locked": @updates[:locked],
                 "updated_at": @updates[:updated_at]
               }
@@ -334,17 +357,20 @@ RSpec.describe "Post API", type: :request do
 
           put "/v1/posts/#{@comparable.id}", :params => unauthorized_update_put_request_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
+          expect(ActiveStorage::Attachment.all).to be_empty
         end
         it "unable to #patch update on another family member's post" do
           unauthorized_patch_of_post_params = {
             "id": @updates[:id],
             "post": {
-              "body": @updates[:body]
+              "body": @updates[:body],
+              "media": @image_file
             }
           }
 
           patch "/v1/posts/#{@comparable.id}", :params => unauthorized_patch_of_post_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
+          expect(ActiveStorage::Attachment.all).to be_empty
         end
         it "unable to #patch update on a protected field" do
           update_patch_request_unpermitted_params = {
@@ -353,6 +379,7 @@ RSpec.describe "Post API", type: :request do
               "id": @updates[:id],
               "family_id": @updates[:family_id],
               "member_id": @updates[:member_id],
+              "media": @image_file,
               "edit": @updates[:edit],
               "locked": @updates[:locked],
               "created_at": @updates[:created_at]
@@ -369,6 +396,7 @@ RSpec.describe "Post API", type: :request do
               "family_id": @updates[:family_id],
               "member_id": @updates[:member_id],
               "edit": @updates[:edit],
+              "media": @image_file,
               "locked": @updates[:locked],
               "created_at": @updates[:created_at]
             }
@@ -403,22 +431,21 @@ RSpec.describe "Post API", type: :request do
     before(:each) do
       @auth_headers = @member.create_new_auth_token
       @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: @normal_member.id )
-      update_put = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
-      update_patch = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
+      update = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
       @update_put_request_params = {
         "id": @comparable.id,
         "post": {
           "id": @comparable.id,
           "attributes": {
-            "family_id": update_put.family_id,
-            "member_id": update_put.member_id,
-            "body": update_put.body,
-            "location": update_put.location,
-            "edit": update_put.edit,
-            "attachment": update_put.attachment,
-            "locked": update_put.locked,
-            "created_at": update_put.created_at,
-            "updated_at": update_put.updated_at
+            "family_id": update.family_id,
+            "member_id": update.member_id,
+            "body": update.body,
+            "location": update.location,
+            "edit": update.edit,
+            "media": @image_file,
+            "locked": update.locked,
+            "created_at": update.created_at,
+            "updated_at": update.updated_at
           }
         }
       }
@@ -427,7 +454,8 @@ RSpec.describe "Post API", type: :request do
         "post": {
           "id": @comparable.id,
           "attributes": {
-            "body": update_patch.body
+            "body": update.body,
+            "media": @image_file
           }
         }
       }
@@ -445,7 +473,7 @@ RSpec.describe "Post API", type: :request do
         expect(actual["location"]).to eq(expected[:location])
         expect(actual["family-id"]).to eq(@comparable.family_id) # actual vs expected tested in Unauthorized to Family
         expect(actual["member-id"]).to_not eq(expected[:member_id])
-        expect(actual["attachment"]).to eq(expected[:attachment])
+        expect(actual["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual["edit"]).to eq(expected[:edit])
         expect(actual["created-at"]).to_not eq(expected[:created_at])
         expect(actual["updated-at"]).to_not eq(expected[:updated_at])
@@ -462,7 +490,7 @@ RSpec.describe "Post API", type: :request do
         expect(actual["location"][1]).to be_within(0.000000000009).of(@comparable.location[1])
         expect(actual["family-id"]).to eq(@comparable.family_id) # actual vs expected tested in Unauthorized to Family
         expect(actual["member-id"]).to eq(@comparable.member_id)
-        expect(actual["attachment"]).to eq(@comparable.attachment)
+        expect(actual["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual["edit"]).to eq(@comparable.edit)
         expect(actual["created-at"]).to_not eq(@comparable.created_at)
         expect(actual["updated-at"]).to_not eq(@comparable.updated_at)
@@ -544,7 +572,8 @@ RSpec.describe "Post API", type: :request do
               "body": @comparable.body,
               "location": @comparable.location,
               "family_id": @comparable.family_id,
-              "member_id": @comparable.member_id
+              "member_id": @comparable.member_id,
+              "media": @image_file
             }
           }
         }
@@ -555,6 +584,7 @@ RSpec.describe "Post API", type: :request do
       it "unable to create a post in another family" do
         post "/v1/posts", :params => @create_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
     end
     context "PUT-PATCH /posts Posts#update" do
@@ -563,8 +593,7 @@ RSpec.describe "Post API", type: :request do
       end
       before do
         @comparable = FactoryBot.create(:post, family_id: @member_family_id, member_id: @member.id )
-        update_put = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
-        update_patch = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
+        update = FactoryBot.build(:post, family_id: @member_family_id, member_id: @member.id )
         @update_put_request_params = {
           "id": @comparable.id,
           "post": {
@@ -572,13 +601,13 @@ RSpec.describe "Post API", type: :request do
             "attributes": {
               "family_id": @comparable.family_id,
               "member_id": @comparable.member_id,
-              "body": update_put.body,
-              "location": update_put.location,
-              "edit": update_put.edit,
-              "attachment": update_put.attachment,
-              "locked": update_put.locked,
-              "created_at": update_put.created_at,
-              "updated_at": update_put.updated_at
+              "body": update.body,
+              "location": update.location,
+              "edit": update.edit,
+              "locked": update.locked,
+              "created_at": update.created_at,
+              "updated_at": update.updated_at,
+              "media": @image_file
             }
           }
         }
@@ -587,7 +616,8 @@ RSpec.describe "Post API", type: :request do
           "post": {
             "id": @comparable.id,
             "attributes": {
-              "body": update_patch.body
+              "body": update.body,
+              "media": @image_file
             }
           }
         }
@@ -595,10 +625,12 @@ RSpec.describe "Post API", type: :request do
       it "returns 403 error for an unauthorized update put" do
         put "/v1/posts/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
       it 'returns 403 error for an unauthorized update patch' do
         patch "/v1/posts/#{@comparable.id}", :params => @update_patch_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
     end
     context "DELETE /posts Posts#destroy" do
@@ -645,7 +677,8 @@ RSpec.describe "Post API", type: :request do
               "body": comparable_for_create.body,
               "location": comparable_for_create.location,
               "family_id": comparable_for_create.family_id,
-              "member_id": comparable_for_create.member_id
+              "member_id": comparable_for_create.member_id,
+              "media": @image_file
             }
           }
         }
@@ -656,8 +689,7 @@ RSpec.describe "Post API", type: :request do
     context "PUT-PATCH /posts Posts#update" do
       before do
         @comparable = FactoryBot.create(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
-        update_put = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
-        update_patch = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
+        update = FactoryBot.build(:post, family_id: @authorized_member_family_id, member_id: @authorized_member.id )
         @update_put_request_params = {
           "id": @comparable.id,
           "post": {
@@ -665,13 +697,13 @@ RSpec.describe "Post API", type: :request do
             "attributes": {
               "family_id": @comparable.family_id,
               "member_id": @comparable.member_id,
-              "body": update_put.body,
-              "location": update_put.location,
-              "edit": update_put.edit,
-              "attachment": update_put.attachment,
-              "locked": update_put.locked,
-              "created_at": update_put.created_at,
-              "updated_at": update_put.updated_at
+              "body": update.body,
+              "location": update.location,
+              "edit": update.edit,
+              "locked": update.locked,
+              "created_at": update.created_at,
+              "updated_at": update.updated_at,
+              "media": @image_file
             }
           }
         }
@@ -680,7 +712,8 @@ RSpec.describe "Post API", type: :request do
           "post": {
             "id": @comparable.id,
             "attributes": {
-              "body": update_patch.body
+              "body": update.body,
+              "media": @image_file
             }
           }
         }

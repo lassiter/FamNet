@@ -4,10 +4,11 @@ require "recipe_factory"
 
 # This is a two-step factory that loops using find_or_create_by to create/locate
 # Ingredients and Tags initally returning a valid Recipe.new record to 
-# the Recipe Controller. The callback takes the newly saved recipe_id to create
+# the Recipe Controller. The factory_callback takes the newly saved recipe_id to create
 # join tables to the save recipe. @new_recipe_params is the format the factory 
 # takes after converting the params to a hash. The formatting for the steps
-# takes place on the front end.
+# takes place on the front end. The update_callback ensures added/removed tags are
+# properly added or removed.
 
 RSpec.describe RecipeFactory do
   before do
@@ -81,6 +82,61 @@ RSpec.describe RecipeFactory do
           expect(@recipe_to_callback.ingredients.pluck(:title)).to include(record.ingredient.title)
         end
       end
+    end
+  end
+  describe 'update callback' do
+    before(:each) do
+      @recipe_to_callback = RecipeFactory.new(@new_recipe_params).result
+      @recipe_to_callback.save
+      @calledback_recipe_array = RecipeFactory.new(@new_recipe_params).factory_callback(@recipe_to_callback.id)
+      @recipe_to_callback = @recipe_to_callback.reload
+    end
+    it 'it removes RecipeTags when a tag is dropped' do
+      dropped_params = {
+        "member_id"=>@member.id.to_s,
+        "tags_list"=>[
+          {"title"=>"foobar"}, 
+          {"title"=>"foobaz", "description"=>"Illo qui assumenda dolorem ut id quisquam et."}
+        ]
+      }
+      expect{RecipeFactory.new(dropped_params).update_callback(@recipe_to_callback.id)}.to change{@recipe_to_callback.tags.count}.from(3).to(2)
+      expect(@recipe_to_callback.tags.pluck(:title)).to_not include("Italian")
+      expect(Tag.find_by(title: "Italian").recipe_tags.count).to eq(0)
+    end
+    it 'it adds RecipeTags when a tag is added' do
+      added_params = {
+        "member_id"=>@member.id.to_s,
+        "tags_list"=>[
+          {"title"=>"foobar"}, 
+          {"title"=>"foobaz", "description"=>"Illo qui assumenda dolorem ut id quisquam et."}, 
+          {"title"=>"italian", "description"=>"Cultural food deriving from italy", "mature"=>"true"},
+          {"title"=>"addition", "description"=>"Cultural food deriving from italy", "mature"=>"true"}
+        ]
+      }
+      expect{RecipeFactory.new(added_params).update_callback(@recipe_to_callback.id)}.to change{@recipe_to_callback.tags.count}.from(3).to(4)
+      expect(@recipe_to_callback.tags.pluck(:title)).to include("Addition")
+      new_tag = Tag.find_by(title: "Addition")
+      expect(RecipeTag.exists?(recipe_id: @recipe_to_callback.id, tag_id: new_tag.id)).to be_truthy
+    end
+    it 'it removes RecipeIngredients when a ingredient is dropped' do
+      dropped_params = {
+        "member_id"=>@member.id.to_s,
+        "ingredients_list"=>["CarobCarrot", "Rose Water", "Star Fruit", "Custard ApplesDaikon", "Pine Nut"]
+      }
+      expect{RecipeFactory.new(dropped_params).update_callback(@recipe_to_callback.id)}.to change{@recipe_to_callback.ingredients.count}.from(6).to(5)
+      expect(@recipe_to_callback.ingredients.pluck(:title)).to_not include("Mountain Bread")
+      new_ingredient = Ingredient.find_by(title: "Mountain Bread")
+      expect(RecipeIngredient.exists?(recipe_id: @recipe_to_callback.id, ingredient_id: new_ingredient.id)).to be_falsey
+    end
+    it 'it adds RecipeIngredients when a ingredient is added' do
+      added_params = {
+        "member_id"=>@member.id.to_s,
+        "ingredients_list"=>["CarobCarrot", "Rose Water", "Star Fruit", "Custard ApplesDaikon", "Pine Nut", "Mountain Bread", "Apple Pie"]
+      }
+      expect{RecipeFactory.new(added_params).update_callback(@recipe_to_callback.id)}.to change{@recipe_to_callback.ingredients.count}.from(6).to(7)
+      expect(@recipe_to_callback.ingredients.pluck(:title)).to include("Apple Pie")
+      new_ingredient = Ingredient.find_by(title: "Apple Pie")
+      expect(RecipeIngredient.exists?(recipe_id: @recipe_to_callback.id, ingredient_id: new_ingredient.id)).to be_truthy
     end
   end
 end

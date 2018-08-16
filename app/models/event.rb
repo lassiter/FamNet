@@ -12,8 +12,7 @@ class Event < ApplicationRecord
   belongs_to :family
   belongs_to :member
   has_many :event_rsvps
-  # has_many :comments
-  # has_many :reactions
+  has_one_attached :media
 
 
   validates :title, presence: true, length: { minimum: 1 }, format: { with: /[A-Za-z\u00C0-\u00D6\u00D8-\u00f6\u00f8-\u00ff\s"'-.!?;]+/, message: "only allows letters and \"'-.!?;" }

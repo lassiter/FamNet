@@ -5,6 +5,9 @@ RSpec.describe "Comment API", type: :request do
     family_member = FactoryBot.create(:family_member, family_id: @family.id, authorized_at: DateTime.now)
     @member = family_member.member
     @member_family_id = @family.id
+    @image_file = fixture_file_upload(Rails.root.to_s + '/spec/fixtures/images/img.jpg', 'img/jpg')
+    @image_filename = 'img.jpg'
+    @image_content_type = 'image/jpg'
   end
   describe ":: Compatability" do
     it "with Posts works." do
@@ -36,6 +39,8 @@ RSpec.describe "Comment API", type: :request do
     context "GET subject/:id/comments Comments#index" do
       before do
         @comparable = FactoryBot.create_list(:comment, 5, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @member.id)
+        @media_attached_comparable = @comparable.first
+        @media_attached_comparable.media.attach(io: File.open(@image_file), filename: @image_filename, content_type: @image_content_type)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -79,10 +84,22 @@ RSpec.describe "Comment API", type: :request do
         expect(actual).to include("comment-replies")
         expect(actual).to include("member")
       end
+      it 'the serializer should attach the blob path or return nil for other 4' do
+        get '/v1/posts', :headers => @auth_headers
+        json = JSON.parse(response.body)["data"]
+        json.each do |data|
+          if data["id"].to_i == @media_attached_comparable.id
+            expect(data["attributes"]["media"]).to eq(rails_blob_path(@media_attached_comparable.media))
+          else
+            expect(data["attributes"]["media"]).to eq(nil)
+          end
+        end
+      end
     end
     context "GET subjects/:id/comments/:comment_id Comments#show" do
       before do
         @comparable = FactoryBot.create(:comment, commentable_type: @subject.class.to_s, commentable_id: @subject.id, member_id: @member.id)
+        @comparable.media.attach(io: File.open(@image_file), filename: @image_filename, content_type: @image_content_type)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -99,7 +116,7 @@ RSpec.describe "Comment API", type: :request do
         expect(actual["edit"]).to eq(@comparable.edit)
         expect(actual["commentable-type"]).to eq(@comparable.commentable_type)
         expect(actual["commentable-id"]).to eq(@comparable.commentable_id)
-        expect(actual["attachment"]).to eq(@comparable.attachment)
+        expect(actual["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual["member-id"]).to eq(@comparable.member_id)
 
       end
@@ -142,7 +159,8 @@ RSpec.describe "Comment API", type: :request do
               "body": @comparable.body,
               "commentable_type": @comparable.commentable_type,
               "commentable_id": @comparable.commentable_id,
-              "member_id": @comparable.member_id
+              "member_id": @comparable.member_id,
+              "media": @image_file
             }
         }
       end
@@ -162,12 +180,13 @@ RSpec.describe "Comment API", type: :request do
         json = JSON.parse(response.body)
         actual = json["data"]["attributes"]
         expect(response).to have_http_status(200)
-        comparable_id = Comment.where(commentable_type: @comparable.commentable_type, commentable_id: @comparable.commentable_id, member_id: @comparable.member_id, body: @comparable.body).first.id
-        expect(json["data"]["id"].to_i).to eq(comparable_id)
+        post_create_comparable = Comment.where(commentable_type: @comparable.commentable_type, commentable_id: @comparable.commentable_id, member_id: @comparable.member_id, body: @comparable.body).first
+        expect(json["data"]["id"].to_i).to eq(post_create_comparable.id)
         expect(actual["body"]).to eq(@comparable.body)
         expect(actual["commentable-type"]).to eq(@comparable.commentable_type)
         expect(actual["commentable-id"]).to eq(@comparable.commentable_id)
         expect(actual["member-id"]).to eq(@comparable.member_id)
+        expect(actual["media"]).to eq(rails_blob_path(post_create_comparable.media))
       end
       it 'shows the relationships and links to them in the json package' do
         post '/v1/comments', :params => {:comment => @create_request_params}, :headers => @auth_headers
@@ -197,7 +216,7 @@ RSpec.describe "Comment API", type: :request do
               "commentable_id": @subject.id,
               "member_id": @comparable.member_id,
               "body": update.body,
-              "attachment": update.attachment
+              "media" => @image_file
             }
           }
         }
@@ -206,7 +225,8 @@ RSpec.describe "Comment API", type: :request do
           "comment": {
             "id": @comparable.id,
             "attributes": {
-              "body": update.body
+              "body": update.body,
+              "media" => @image_file
             }
           }
         }
@@ -222,7 +242,7 @@ RSpec.describe "Comment API", type: :request do
       it "#put 200 status and matches the json for the putted comment" do
         put "/v1/comments/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         expected = @update_put_request_params[:comment][:attributes].as_json
-        
+
         json = JSON.parse(response.body)
         actual = json["data"]
         actual_attributes = json["data"]["attributes"]
@@ -232,7 +252,7 @@ RSpec.describe "Comment API", type: :request do
         expect(actual_attributes["edit"]).to eq(@comparable.edit)
         expect(actual_attributes["commentable-type"]).to eq(@comparable.commentable_type)
         expect(actual_attributes["commentable-id"]).to eq(@comparable.commentable_id)
-        expect(actual_attributes["attachment"]).to eq(expected["attachment"])
+        expect(actual_attributes["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual_attributes["member-id"]).to eq(@comparable.member_id)
       end
       it "#patch 200 status and can replace a single attribute and it returns the json for the patched comment" do
@@ -248,7 +268,7 @@ RSpec.describe "Comment API", type: :request do
         expect(actual_attributes["edit"]).to eq(@comparable.edit)
         expect(actual_attributes["commentable-type"]).to eq(@comparable.commentable_type)
         expect(actual_attributes["commentable-id"]).to eq(@comparable.commentable_id)
-        expect(actual_attributes["attachment"]).to eq(@comparable.attachment)
+        expect(actual_attributes["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual_attributes["member-id"]).to eq(@comparable.member_id)
       end
       it '#patch shows the relationships and links to them in the json package' do
@@ -276,6 +296,15 @@ RSpec.describe "Comment API", type: :request do
 
         expect(actual["commentable"]["data"]["id"].to_i).to eq(@subject.id)
         expect(actual["member"]["data"]["id"].to_i).to eq(@comparable.member_id)
+      end
+      it 'can patch a single media file' do
+        file_upload_params = {:comment => {:attributes => {:media => @image_file}}}
+        expect(@comparable.media.attached?).to_not eq(true)
+        patch "/v1/comments/#{@comparable.id}", :params => file_upload_params, :headers => @auth_headers
+        expect(response).to have_http_status(200)
+        json = JSON.parse(response.body)["data"]["attributes"]["media"]
+        expect(@comparable.reload.media.attached?).to eq(true)
+        expect(rails_blob_path(@comparable.reload.media)).to eq(json)
       end
     end
     context "DELETE /comments/:id Comments#destroy" do
@@ -324,7 +353,7 @@ RSpec.describe "Comment API", type: :request do
               "commentable_id": @subject.id,
               "member_id": @updates[:member_id],
               "body": @updates[:body],
-              "attachment": @updates[:attachment]
+              "media": @image_file
               }
             }
           }
@@ -336,7 +365,8 @@ RSpec.describe "Comment API", type: :request do
           unauthorized_patch_of_post_params = {
             "id": @comparable[:id],
             "comment": {
-              "body": @updates[:body]
+              "body": @updates[:body],
+              "media": @image_file
             }
           }
 
@@ -351,8 +381,7 @@ RSpec.describe "Comment API", type: :request do
               "commentable_type": @update_subject.class.to_s,
               "commentable_id": @update_subject.id,
               "member_id": @updates[:member_id],
-              "body": @updates[:body],
-              "attachment": @updates[:attachment]
+              "body": @updates[:body]
             }
           }
           patch "/v1/comments/#{@comparable.id}", :params => update_patch_request_unpermitted_params, :headers => @auth_headers
@@ -366,8 +395,7 @@ RSpec.describe "Comment API", type: :request do
               "commentable_type": @update_subject.class.to_s,
               "commentable_id": @update_subject.id,
               "member_id": @updates[:member_id],
-              "body": @updates[:body],
-              "attachment": @updates[:attachment]
+              "body": @updates[:body]
             }
           }
           put "/v1/comments/#{@comparable.id}", :params => update_put_request_unpermitted_params, :headers => @auth_headers
@@ -412,8 +440,7 @@ RSpec.describe "Comment API", type: :request do
             "commentable_type": @subject.class.to_s,
             "commentable_id": @subject.id,
             "member_id": @comparable.member_id,
-            "body": update.body,
-            "attachment": update.attachment
+            "body": update.body
           }
         }
       }
@@ -422,7 +449,8 @@ RSpec.describe "Comment API", type: :request do
         "comment": {
           "id": @comparable.id,
           "attributes": {
-            "body": update.body
+            "body": update.body,
+            "media": @image_file
           }
         }
       }
@@ -441,7 +469,7 @@ RSpec.describe "Comment API", type: :request do
         expect(actual_attributes["edit"]).to eq(@comparable.edit)
         expect(actual_attributes["commentable-type"]).to eq(@comparable.commentable_type)
         expect(actual_attributes["commentable-id"]).to eq(@comparable.commentable_id)
-        expect(actual_attributes["attachment"]).to eq(expected["attachment"])
+        expect(actual_attributes["media"]).to eq(expected["media"])
         expect(actual_attributes["member-id"]).to eq(@comparable.member_id)
       end
       it "able to #patch update on another family member's comment" do
@@ -457,7 +485,7 @@ RSpec.describe "Comment API", type: :request do
         expect(actual_attributes["edit"]).to eq(@comparable.edit)
         expect(actual_attributes["commentable-type"]).to eq(@comparable.commentable_type)
         expect(actual_attributes["commentable-id"]).to eq(@comparable.commentable_id)
-        expect(actual_attributes["attachment"]).to eq(@comparable.attachment)
+        expect(actual_attributes["media"]).to eq(rails_blob_path(@comparable.reload.media))
         expect(actual_attributes["member-id"]).to eq(@comparable.member_id)
       end
     end
@@ -566,7 +594,8 @@ RSpec.describe "Comment API", type: :request do
               "body": @comparable.body,
               "commentable_type": @comparable.commentable_type,
               "commentable_id": @comparable.commentable_id,
-              "member_id": @comparable.member_id
+              "member_id": @comparable.member_id,
+              "media": @image_file
             }
           }
         }
@@ -577,6 +606,7 @@ RSpec.describe "Comment API", type: :request do
       it "unable to create a comment in another family" do
         post "/v1/comments", :params => @create_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
     end
     context "PUT-PATCH /comments Comments#update" do
@@ -592,8 +622,7 @@ RSpec.describe "Comment API", type: :request do
               "commentable_type": @subject.class.to_s,
               "commentable_id": @subject.id,
               "member_id": @comparable.member_id,
-              "body": update.body,
-              "attachment": update.attachment
+              "body": update.body
             }
           }
         }
@@ -602,7 +631,8 @@ RSpec.describe "Comment API", type: :request do
           "comment": {
             "id": @comparable.id,
             "attributes": {
-              "body": update.body
+              "body": update.body,
+              "media": @image_file
             }
           }
         }
@@ -613,10 +643,12 @@ RSpec.describe "Comment API", type: :request do
       it "returns 403 error for an unauthorized update put" do
         put "/v1/comments/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
       it 'returns 403 error for an unauthorized update patch' do
         patch "/v1/comments/#{@comparable.id}", :params => @update_patch_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
     end
     context "DELETE /comments Comments#destroy" do

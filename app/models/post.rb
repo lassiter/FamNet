@@ -6,15 +6,18 @@ class Post < ApplicationRecord
 
   belongs_to :family
   belongs_to :member
+  has_one_attached :media
 
   validate :validate_location
-  validates :body, length: { minimum: 1 }, format: { with: /[A-Za-z\u00C0-\u00D6\u00D8-\u00f6\u00f8-\u00ff\s"'-.!?;]+/, message: "only allows letters and \"'-.!?;" }
-  validates_presence_of :body, :unless => :attachment?
+  validates :body, presence: true, length: { minimum: 1 }, 
+    format: { 
+      with: /[A-Za-z\u00C0-\u00D6\u00D8-\u00f6\u00f8-\u00ff\s"'-.!?;]+/, 
+      message: "only allows letters and \"'-.!?;" 
+    }, unless: Proc.new { (self.body.present? == true && self.media.attached? == true) || self.media.attached? }, on: :create
+    
   validates_presence_of :family_id
   validates_presence_of :member_id
   validates :locked, inclusion: { in: [ true , false ] }, exclusion: { in: [nil] }
-
-  # has_one_attachment :attachment
 
   def validate_location
     # Resource: https://gis.stackexchange.com/questions/8650/measuring-accuracy-of-latitude-and-longitude

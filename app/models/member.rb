@@ -17,6 +17,8 @@ class Member < ActiveRecord::Base
   has_many :invitations, :class_name => "Invite", :foreign_key => 'recipient_id'
   has_many :sent_invites, :class_name => "Invite", :foreign_key => 'sender_id'
 
+  has_one_attached :avatar
+
   enum :gender => [:female, :male, :nonbinary]
 
   validates_presence_of :provider

@@ -1,7 +1,9 @@
 require 'rails_helper'
 
 RSpec.describe "Recipes", type: :request do
-  
+  let(:image_file){ fixture_file_upload(Rails.root.to_s + '/spec/fixtures/images/img.jpg', 'img/jpg') }
+  let(:image_filename){'img.jpg'}
+  let(:image_content_type){'image/jpg'}
   describe ':: Members / Same Family ::' do
     before do
       @family = FactoryBot.create(:family)
@@ -69,6 +71,8 @@ RSpec.describe "Recipes", type: :request do
         # Recipe List for Comparsions
         @comparables = Recipe.where(id: @comparables_array)
         @comparable = @comparables.first
+        @media_attached_comparable = @comparable
+        @media_attached_comparable.media.attach(io: File.open(image_file), filename: image_filename, content_type: image_content_type)
     end
     context "GET /recipes Recipes#index" do
       before do
@@ -83,23 +87,24 @@ RSpec.describe "Recipes", type: :request do
         json = JSON.parse(response.body)["data"]
         actual = json
         expected = @comparables
-        actual_record = json.first["attributes"]
-        expected_record = @comparables.first
+        actual_record = nil
+        json.each {|data| actual_record = data if data["attributes"]["media"] == rails_blob_path(@media_attached_comparable.media)}
+        expected_record = @comparables.where(id: actual_record["id"].to_i).first
         expect(response).to have_http_status(200)
 
-        expect(actual_record["title"]).to eq(expected_record.title)
-        expect(actual_record["description"]).to eq(expected_record.description)
-        expect(actual_record["member-id"]).to eq(expected_record.member_id)
-        expect(actual_record["attachment"]).to eq(expected_record.attachment)
-        expect(actual_record["tags-list"]).to eq(expected_record.tags_list)
-        expect(actual_record["ingredients-list"]).to eq(expected_record.ingredients_list)
+        expect(actual_record["attributes"]["title"]).to eq(expected_record.title)
+        expect(actual_record["attributes"]["description"]).to eq(expected_record.description)
+        expect(actual_record["attributes"]["member-id"]).to eq(expected_record.member_id)
+        expect(actual_record["attributes"]["media"]).to eq(rails_blob_path(@media_attached_comparable.media))
+        expect(actual_record["attributes"]["tags-list"]).to eq(expected_record.tags_list)
+        expect(actual_record["attributes"]["ingredients-list"]).to eq(expected_record.ingredients_list)
 
-        actual_steps = actual_record["steps"]
+        actual_steps = actual_record["attributes"]["steps"]
         expect(actual_steps).to include("preparation")
         expect(actual_steps).to include("cooking")
         expect(actual_steps).to include("post-cooking")
 
-        actual_steps_example = actual_record["steps"]["preparation"].first
+        actual_steps_example = actual_record["attributes"]["steps"]["preparation"].first
         expected_example = expected_record.steps["preparation"].first
         expect(actual_steps_example["instruction"]).to eq(expected_example["instruction"])
         expect(actual_steps_example["time-length"]).to eq(expected_example["time_length"])
@@ -167,13 +172,16 @@ RSpec.describe "Recipes", type: :request do
 
         @recipe = FactoryBot.build(:recipe, steps: steps, member_id: @member.id, ingredients_list: ingredient_list)
         @create_request_params = {
+          "attributes": {
             "title": @recipe.title,
             "description": @recipe.description,
             "member_id": @recipe.member_id,
             "ingredients_list": @recipe.ingredients_list, 
             "steps": steps, 
-            "tags_list": create_tags_list
+            "tags_list": create_tags_list,
+            "media": image_file
           }
+        }
         @auth_headers = @member.create_new_auth_token
       end
       it "200 status of correct type" do
@@ -185,15 +193,16 @@ RSpec.describe "Recipes", type: :request do
       end
       it 'and it returns the json for the newly created post following schema' do
         post '/v1/recipes', :params => {recipe: @create_request_params}, :headers => @auth_headers
+        actual_id = JSON.parse(response.body)["data"]["id"].to_i
         actual = JSON.parse(response.body)["data"]["attributes"]
-        expected = @create_request_params
-        expect(response).to have_http_status(200)
+        expected = @create_request_params[:attributes]
 
+        expect(response).to have_http_status(200)
         expect(actual["title"]).to eq(expected[:title])
         expect(actual["description"]).to eq(expected[:description])
         expect(actual["member-id"]).to eq(expected[:member_id])
-        expect(actual["attachment"]).to eq(expected[:attachment])
-        expect(actual["tags-list"].first).to_not eq(expected[:tags_list].pluck(:title).first) # "; Drop Table Recipes;   " vs "foobar"
+        expect(actual["media"]).to eq(rails_blob_path(Recipe.find(actual_id).media))
+        expect(actual["tags-list"].first).to_not eq(expected[:tags_list].pluck(:title).first)
         expect(actual["tags-list"].second_to_last.downcase).to eq(expected[:tags_list].pluck(:title).second_to_last.downcase)
         expect(actual["tags-list"].last.downcase).to eq(expected[:tags_list].pluck(:title).last.downcase)
         expect(actual["ingredients-list"]).to eq(expected[:ingredients_list])
@@ -204,7 +213,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_steps).to include("post-cooking")
 
         actual_steps_example = actual["steps"]["preparation"].first
-        expected_example = @create_request_params[:steps]["preparation"].first
+        expected_example = @create_request_params[:attributes][:steps]["preparation"].first
         expect(actual_steps_example["instruction"]).to eq(expected_example[:instruction])
         expect(actual_steps_example["time-length"]).to eq(expected_example[:time_length])
         expect(actual_steps_example["ingredients"]).to eq(expected_example[:ingredients])
@@ -219,7 +228,7 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_relationships).to include("tags")
         expect(actual_relationships).to include("ingredients")
 
-        expect(actual_links["self"]).to eq(Rails.application.routes.url_helpers.api_v1_recipes_url(id: actual["id"]))
+        expect(actual_links["self"]).to eq(Rails.application.routes.url_helpers.api_v1_recipes_path(id: actual["id"]))
       end
     end
     context "GET /recipes Recipes#show" do
@@ -234,11 +243,10 @@ RSpec.describe "Recipes", type: :request do
         expect(response).to have_http_status(200)
         expect(json["id"].to_i).to eq(expected_record.id)
         expect(json["type"]).to eq(expected_record.class.to_s.downcase)
-
         expect(actual_record["title"]).to eq(expected_record.title)
         expect(actual_record["description"]).to eq(expected_record.description)
         expect(actual_record["member-id"]).to eq(expected_record.member_id)
-        expect(actual_record["attachment"]).to eq(expected_record.attachment)
+        expect(actual_record["media"]).to eq(rails_blob_path(expected_record.media))
         expect(actual_record["tags-list"]).to eq(expected_record.tags_list)
         expect(actual_record["ingredients-list"]).to eq(expected_record.ingredients_list)
 
@@ -275,10 +283,12 @@ RSpec.describe "Recipes", type: :request do
         @comparable = FactoryBot.create(:recipe, member_id: @member.id)
         @recipe = FactoryBot.build(:recipe, member_id: @member.id)
         @update_params = {
+          "attributes": {
             "title": @recipe.title,
             "description": @recipe.description,
             "ingredients_list": @recipe.ingredients_list, 
             "steps": @recipe.steps
+          }
         }
         @auth_headers = @member.create_new_auth_token
       end
@@ -286,7 +296,7 @@ RSpec.describe "Recipes", type: :request do
         patch "/v1/recipes/#{@comparable.id}", :params => {:recipe => @update_params}, :headers => @auth_headers
         json = JSON.parse(response.body)["data"]
         actual_record = json["attributes"]
-        expected_record = @update_params
+        expected_record = @update_params[:attributes]
         expect(response).to have_http_status(200)
         expect(actual_record["title"]).to eq(expected_record[:title])
         expect(actual_record["description"]).to eq(expected_record[:description])
@@ -312,7 +322,7 @@ RSpec.describe "Recipes", type: :request do
         patch "/v1/recipes/#{@comparable.id}", :params => {:recipe => @update_params}, :headers => @auth_headers
         json = JSON.parse(response.body)["data"]
         actual_record = json["attributes"]
-        expected_record = @update_params
+        expected_record = @update_params[:attributes]
         expect(response).to have_http_status(200)
         expect(actual_record["title"]).to eq(expected_record[:title])
         expect(actual_record["description"]).to eq(expected_record[:description])
@@ -333,6 +343,18 @@ RSpec.describe "Recipes", type: :request do
         expect(actual_record).to include("tags")
         expect(actual_record).to include("ingredients")
         expect(actual_record).to include("member")
+      end
+      it '#patch able to upload an image' do
+        patch "/v1/recipes/#{@comparable.id}", :params => {:recipe => {:attributes => {:media => image_file}}}, :headers => @auth_headers
+        media = JSON.parse(response.body)["data"]["attributes"]["media"]
+        expect(response).to have_http_status(200)
+        expect(media).to eq(rails_blob_path(@comparable.reload.media))
+      end
+      it "#put able to upload an image" do
+        patch "/v1/recipes/#{@comparable.id}", :params => {:recipe => @update_params.merge!(:attributes => {:media => image_file})}, :headers => @auth_headers
+        media = JSON.parse(response.body)["data"]["attributes"]["media"]
+        expect(response).to have_http_status(200)
+        expect(media).to eq(rails_blob_path(@comparable.reload.media))
       end
       it "unable to #put on another family member's recipe" do
         auth_comparable = FactoryBot.create(:recipe, member_id: @second_member.id)
@@ -471,9 +493,12 @@ RSpec.describe "Recipes", type: :request do
         @comparable = FactoryBot.create(:recipe, member_id: @second_member.id)
         @recipe = FactoryBot.build(:recipe, member_id: @member.id)
         @update_params = {
+          "attributes": {
             "title": @recipe.title,
             "description": @recipe.description,
-            "ingredients_list": @recipe.ingredients_list
+            "ingredients_list": @recipe.ingredients_list,
+            "media": image_file
+          }
         }
         @auth_headers = @member.create_new_auth_token
       end
@@ -481,21 +506,23 @@ RSpec.describe "Recipes", type: :request do
         patch "/v1/recipes/#{@comparable.id}", :params => {:recipe => @update_params}, :headers => @auth_headers
         json = JSON.parse(response.body)["data"]
         actual_record = json["attributes"]
-        expected_record = @update_params
+        expected_record = @update_params[:attributes]
         expect(response).to have_http_status(200)
         expect(actual_record["title"]).to eq(expected_record[:title])
         expect(actual_record["description"]).to eq(expected_record[:description])
         expect(actual_record["ingredients-list"]).to eq(expected_record[:ingredients_list])
+        expect(actual_record["media"]).to eq(rails_blob_path(Recipe.find(@comparable.id).media))
       end
       it "able to #put update on another family member's recipe" do
         put "/v1/recipes/#{@comparable.id}", :params => {:recipe => @update_params}, :headers => @auth_headers
         json = JSON.parse(response.body)["data"]
         actual_record = json["attributes"]
-        expected_record = @update_params
+        expected_record = @update_params[:attributes]
         expect(response).to have_http_status(200)
         expect(actual_record["title"]).to eq(expected_record[:title])
         expect(actual_record["description"]).to eq(expected_record[:description])
         expect(actual_record["ingredients-list"]).to eq(expected_record[:ingredients_list])
+        expect(actual_record["media"]).to eq(rails_blob_path(Recipe.find(@comparable.id).media))
       end
     end
     context "DELETE /recipes Recipes#destroy" do
@@ -570,9 +597,11 @@ RSpec.describe "Recipes", type: :request do
         @comparable = @family_recipe.first
         @recipe = FactoryBot.build(:recipe, member_id: @member.id)
         @update_params = {
+          "attributes": {
             "title": @recipe.title,
             "description": @recipe.description,
             "ingredients_list": @recipe.ingredients_list
+          }
         }
         @auth_headers = @member.create_new_auth_token
       end

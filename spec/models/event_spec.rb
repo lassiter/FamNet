@@ -15,6 +15,7 @@ RSpec.describe Event, type: :model do
   before(:each) do
     @comparable = FactoryBot.build(:event, family_id: @family_id, member_id: @member_id)
   end
+  it_behaves_like 'media'
   it_behaves_like 'interaction'
   describe "valid" do
     it "all nils should be valid :: location" do
@@ -121,10 +122,6 @@ RSpec.describe Event, type: :model do
         event = Event.new(location: "")
         expect(event).to_not be_valid
       end
-      it "all nils should be invalid :: attachment" do
-        event = Event.new(attachment: "")
-        expect(event).to_not be_valid
-      end
       it "all nils should be invalid :: locked" do
         event = Event.new(locked: "")
         expect(event).to_not be_valid
@@ -137,6 +134,18 @@ RSpec.describe Event, type: :model do
         event = Event.new(member_id: "")
         expect(event).to_not be_valid
       end
+    end
+  end
+  describe 'body - media validation' do
+    it 'should be valid without media' do
+      subject = FactoryBot.build(:event, family_id: @family_id, member_id: @member_id)
+      expect(subject).to be_valid
+      expect(subject.media.attached?).to be_falsey
+    end
+    it 'should be valid with media' do
+      subject = FactoryBot.build(:event, family_id: @family_id, member_id: @member_id, media: fixture_file_upload(Rails.root.to_s + '/spec/fixtures/images/img.jpg', 'img/jpg'))
+      expect(subject).to be_valid
+      expect(subject.media.attached?).to be_truthy
     end
   end
 end
