@@ -4,7 +4,6 @@ class CreateRecipes < ActiveRecord::Migration[5.2]
       t.string :title, :null => false
       t.text :description
       t.json :steps
-      t.binary :attachment
       t.text :ingredients_list, array: true
       t.text :tags_list, array: true
       t.references :member

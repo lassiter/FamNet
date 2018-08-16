@@ -4,11 +4,16 @@ RSpec.describe "Member API", type: :request do
     @member_family_id  = FactoryBot.create(:family).id
     @alt_family_id = FactoryBot.create(:family).id
 
-
     family_member = FactoryBot.create(:family_member, family_id: @member_family_id, authorized_at: DateTime.now)
     @member = family_member.member
     FactoryBot.create_list(:family_member, 9, family_id: @member_family_id,  authorized_at: DateTime.now)
     FactoryBot.create_list(:family_member, 10, family_id: @alt_family_id,  authorized_at: DateTime.now)
+
+    @provided_avatar_file = fixture_file_upload(Rails.root.to_s + '/spec/fixtures/images/img.jpg', 'img/jpg')
+    @provided_avatar_filename = 'img.jpg'
+    @provided_avatar_content_type = 'avatar/jpg'
+
+    @default_avatar_file = "assets/images/default_avatar.png"
   end
   describe ':: Members / Same Family ::' do
     before do
@@ -66,8 +71,8 @@ RSpec.describe "Member API", type: :request do
         expect(actual["attributes"]).to include("name")
         expect(actual["attributes"]).to include("surname")
         expect(actual["attributes"]).to include("nickname")
-        expect(actual["attributes"]).to include("image")
-        expect(actual["attributes"]).to include("image-store")
+        expect(actual["attributes"]).to include("avatar")
+        
         # Links
         expect(actual).to include("links")
         expect(actual["links"]).to include("self")
@@ -91,7 +96,10 @@ RSpec.describe "Member API", type: :request do
     end
     context "GET /members/:id Members#show (non-current_user)" do
       before do
-        @comparable = FamilyMember.where(family_id: @member_family_id).where.not(authorized_at: nil, member_id: @member.id).first.member
+        @comparables = FamilyMember.where(family_id: @member_family_id).where.not(authorized_at: nil, member_id: @member.id)
+        @comparable = @comparables.first.member
+        @avatar_attached_comparable = @comparable
+        @avatar_attached_comparable.avatar.attach(io: File.open(@provided_avatar_file), filename: @provided_avatar_filename, content_type: @provided_avatar_content_type)
       end
       before(:each) do
         @auth_headers = @member.create_new_auth_token
@@ -113,8 +121,8 @@ RSpec.describe "Member API", type: :request do
         expect(actual["attributes"]).to include("name")
         expect(actual["attributes"]).to include("surname")
         expect(actual["attributes"]).to include("nickname")
-        expect(actual["attributes"]).to include("image")
-        expect(actual["attributes"]).to include("image-store")
+        expect(actual["attributes"]).to include("avatar")
+        
 
         expect(actual["attributes"]).to include("contacts")
         expect(actual["attributes"]).to include("addresses")
@@ -154,9 +162,7 @@ RSpec.describe "Member API", type: :request do
         expect(actual["attributes"]["name"]).to eq(expected.name)
         expect(actual["attributes"]["surname"]).to eq(expected.surname)
         expect(actual["attributes"]["nickname"]).to eq(expected.nickname)
-        expect(actual["attributes"]["image"]).to eq(expected.image)
-        expect(actual["attributes"]["image-store"]).to eq(expected.image_store)
-
+        expect(actual["attributes"]["avatar"]).to eq(rails_blob_path(@avatar_attached_comparable.reload.avatar))
         expect(actual["attributes"]["contacts"]).to eq(expected.contacts)
         expect(actual["attributes"]["addresses"]).to eq(expected.addresses)
         expect(actual["attributes"]["gender"]).to eq(expected.gender)
@@ -166,12 +172,22 @@ RSpec.describe "Member API", type: :request do
 
 
         # Links
-        # expect(actual["links"]).to eq("self")
         expect(actual["links"]).to eq("self" => api_v1_member_path(id: actual["id"]))
 
       end
+      it "shows default avatar if member doesn't have one attached to their record" do
+        # This has a authorized rendering as well including important user info.
+        default_avatar_member = @comparables.second.member
+        expect(default_avatar_member.avatar.attached?).to be_falsey
+        get "/v1/members/#{default_avatar_member.id}", :headers => @auth_headers
+        expect(default_avatar_member.reload.avatar.attached?).to be_falsey
+        avatar_url = JSON.parse(response.body)["data"]["attributes"]["avatar"]
+        default_avatar_url = "assets/images/default_avatar.png"
+        expect(avatar_url).to eq(default_avatar_url)
+      end
       context ' :: Includes :: ' do
         xit 'and it shows the included Recipes' do
+          # trouble with includes via ams
           FactoryBot.create_list(:recipe, 5, member_id: @member.id)
           # currently having trouble getting optional includes
           @include_params = {:include => ["recipes"]}
@@ -192,6 +208,7 @@ RSpec.describe "Member API", type: :request do
         end
 
         xit 'and it shows the included EventRsvps and it\'s Event' do
+          # trouble with includes via ams
           # Only RSVP'd Events
           @include_params = {:include => ["event-rsvps"]}
           get "/v1/members/#{@comparable.id}", :params => @include_params, :headers => @auth_headers
@@ -208,7 +225,6 @@ RSpec.describe "Member API", type: :request do
 
           actual_event_rsvp_links = json["data"]["relationships"]["recipes"]["links"]
           expect(actual_event_rsvp_links["related"]).to eq(api_v1_event_path(id: json["data"]["attributes"]["event_id"]))
-        
         end
       end
     end
@@ -225,9 +241,8 @@ RSpec.describe "Member API", type: :request do
             "attributes": {
               "name": update_put.name,
               "nickname": update_put.nickname,
-              "image": "http://example.com/foobar/boobar/barbaz.jpg",
+              "avatar": @provided_avatar_file,
               "surname": update_put.surname,
-              "image_store": nil,
               "contacts": update_put.contacts,
               "addresses": update_put.addresses,
               "gender": update_put.gender,
@@ -243,7 +258,8 @@ RSpec.describe "Member API", type: :request do
             "id": @comparable.id,
             "attributes": {
               "contacts": update_patch.contacts,
-              "addresses": update_patch.addresses
+              "addresses": update_patch.addresses,
+              "avatar": @provided_avatar_file
             }
           }
         }
@@ -262,8 +278,7 @@ RSpec.describe "Member API", type: :request do
         expect(actual["surname"]).to eq(expected[:surname])
         expect(actual["nickname"]).to eq(expected[:nickname])
         expect(actual["gender"]).to eq(expected[:gender])
-        expect(actual["image"]).to eq(expected[:image])
-        expect(actual["image-store"]).to eq(expected[:image_store])
+        expect(actual["avatar"]).to eq(rails_blob_path(Member.find(json["data"]["id"]).avatar))
         expect(actual["instagram"]).to eq(expected[:instagram])
         expect(actual["birthday"].to_datetime).to eq(expected[:birthday])
         expect(actual["contacts"]).to eq(expected[:contacts])
@@ -301,16 +316,20 @@ RSpec.describe "Member API", type: :request do
         expect(actual).to include("comments")
         expect(actual).to include("member")
       end
+      it 'can patch a single media file' do
+        file_upload_params = {:member => {:attributes => {:avatar => @provided_avatar_file}}}
+        expect(@comparable.avatar.attached?).to_not eq(true)
+        patch "/v1/members/#{@comparable.id}", :params => file_upload_params, :headers => @auth_headers
+        expect(response).to have_http_status(200)
+        json = JSON.parse(response.body)["data"]["attributes"]["avatar"]
+        expect(@comparable.reload.avatar.attached?).to eq(true)
+        expect(rails_blob_path(@comparable.reload.avatar)).to eq(json)
+      end
     end
     context "DELETE /members/:id Members#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
-      # after(:each) do
-      #   family_member = FactoryBot.create(:family_member, family_id: @member_family_id, authorized_at: DateTime.now)
-      #   @member = family_member.member
-      #   login_auth(@member)
-      # end
       it "can sucessfully delete current_user" do
         delete "/v1/auth/", :headers => @auth_headers
         json = JSON.parse(response.body) 
@@ -336,9 +355,8 @@ RSpec.describe "Member API", type: :request do
               "attributes": {
                 "name": @updates[:name],
                 "nickname": @updates[:nickname],
-                "image": "http://example.com/foobar/boobar/barbaz.jpg",
+                "avatar": @provided_avatar_file,
                 "surname": @updates[:surname],
-                "image_store": nil,
                 "contacts": @updates[:contacts],
                 "addresses": @updates[:addresses],
                 "gender": @updates[:gender],
@@ -352,6 +370,7 @@ RSpec.describe "Member API", type: :request do
 
           put "/v1/members/#{@second_member.id}", :params => unauthorized_update_put_request_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
+          expect(ActiveStorage::Attachment.all).to be_empty
         end
         it "unable to #patch update on another family member's profile" do
           unauthorized_patch_of_post_params = {
@@ -360,13 +379,15 @@ RSpec.describe "Member API", type: :request do
             "id": @second_member.id,
             "attributes": {
               "contacts": @updates[:contacts],
-              "addresses": @updates[:addresses]
+              "addresses": @updates[:addresses],
+              "avatar": @provided_avatar_file
             }
           }
         }
 
           patch "/v1/members/#{@second_member.id}", :params => unauthorized_patch_of_post_params, :headers => @auth_headers
           expect(response).to have_http_status(403)
+          expect(ActiveStorage::Attachment.all).to be_empty
         end
       end
       context "DELETE /members Members#delete :: Member 2 => Member 1" do
@@ -401,9 +422,8 @@ RSpec.describe "Member API", type: :request do
           "attributes": {
             "name": update_put.name,
             "nickname": update_put.nickname,
-            "image": "http://example.com/foobar/boobar/barbaz.jpg",
+            "avatar": @provided_avatar_file,
             "surname": update_put.surname,
-            "image_store": nil,
             "contacts": update_put.contacts,
             "addresses": update_put.addresses,
             "gender": update_put.gender,
@@ -419,16 +439,16 @@ RSpec.describe "Member API", type: :request do
           "id": @second_member.id,
           "attributes": {
             "contacts": update_patch.contacts,
-            "addresses": update_patch.addresses
+            "addresses": update_patch.addresses,
+            "avatar": @provided_avatar_file
           }
         }
       }
     end
-    context "GET /members Members#update" do
+    context "PUT-PATCH /members Members#update" do
       it "able to #put update on another family member's profile" do
         put "/v1/members/#{@second_member.id}", :params => @update_put_request_params, :headers => @auth_headers
         expected = @update_put_request_params[:member][:attributes]
-
         json = JSON.parse(response.body)
         actual = json["data"]["attributes"]
         expect(response).to have_http_status(200)
@@ -436,8 +456,7 @@ RSpec.describe "Member API", type: :request do
         expect(actual["surname"]).to eq(expected[:surname])
         expect(actual["nickname"]).to eq(expected[:nickname])
         expect(actual["gender"]).to eq(expected[:gender])
-        expect(actual["image"]).to eq(expected[:image])
-        expect(actual["image-store"]).to eq(expected[:image_store])
+        expect(actual["avatar"]).to eq(rails_blob_path(Member.find(json["data"]["id"]).avatar))
         expect(actual["instagram"]).to eq(expected[:instagram])
         expect(actual["birthday"].to_datetime).to eq(expected[:birthday])
         expect(actual["contacts"]).to eq(expected[:contacts])
@@ -455,14 +474,22 @@ RSpec.describe "Member API", type: :request do
         expect(actual["attributes"]["contacts"]).to eq(expected[:contacts])
         expect(actual["attributes"]["addresses"]).to eq(expected[:addresses])
       end
+      it 'can patch a single media file' do
+        file_upload_params = {:member => {:attributes => {:avatar => @provided_avatar_file}}}
+        expect(@second_member.avatar.attached?).to_not eq(true)
+        patch "/v1/members/#{@second_member.id}", :params => file_upload_params, :headers => @auth_headers
+        expect(response).to have_http_status(200)
+        json = JSON.parse(response.body)["data"]["attributes"]["avatar"]
+        expect(@second_member.reload.avatar.attached?).to eq(true)
+        expect(rails_blob_path(@second_member.reload.avatar)).to eq(json)
+      end
     end
-    context "GET /members Members#destroy" do
+    context "DELETE /members Members#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
       it "can sucessfully delete a member" do
         @delete_request_params = {:member => {:id => @second_member.id }}
-
         delete "/v1/members/#{@second_member.id}", :params => @delete_request_params, :headers => @auth_headers
         expect(response).to have_http_status(204)
         expect(FamilyMember.find_by(member_id: @second_member.id)).to eq(nil)
@@ -506,7 +533,7 @@ RSpec.describe "Member API", type: :request do
         expect(response).to have_http_status(403)
       end
     end
-    context "GET /members Members#update" do
+    context "PUT-PATCH /members Members#update" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -522,9 +549,8 @@ RSpec.describe "Member API", type: :request do
             "attributes": {
               "name": update_put.name,
               "nickname": update_put.nickname,
-              "image": "http://example.com/foobar/boobar/barbaz.jpg",
+              "avatar": @provided_avatar_file,
               "surname": update_put.surname,
-              "image_store": nil,
               "contacts": update_put.contacts,
               "addresses": update_put.addresses,
               "gender": update_put.gender,
@@ -540,7 +566,8 @@ RSpec.describe "Member API", type: :request do
             "id": @comparable.id,
             "attributes": {
               "contacts": update_patch.contacts,
-              "addresses": update_patch.addresses
+              "addresses": update_patch.addresses,
+              "avatar": @provided_avatar_file
             }
           }
         }
@@ -548,13 +575,15 @@ RSpec.describe "Member API", type: :request do
       it "returns 403 error for an unauthorized update put" do
         put "/v1/members/#{@comparable.id}", :params => @update_put_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
       it 'returns 403 error for an unauthorized update patch' do
         patch "/v1/members/#{@comparable.id}", :params => @update_patch_request_params, :headers => @auth_headers
         expect(response).to have_http_status(403)
+        expect(ActiveStorage::Attachment.all).to be_empty
       end
     end
-    context "GET /members Members#destroy" do
+    context "DELETE /members Members#destroy" do
       before(:each) do
         @auth_headers = @member.create_new_auth_token
       end
@@ -584,7 +613,7 @@ RSpec.describe "Member API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "PUT - PATCH /members Members#update" do
+    context "PUT-PATCH /members Members#update" do
       it "#put returns a 401 error saying they are not authenticated" do
         put "/v1/members/#{@comparable.id}"
         expect(response).to have_http_status(401)
@@ -594,7 +623,7 @@ RSpec.describe "Member API", type: :request do
         expect(response).to have_http_status(401)
       end
     end
-    context "GET /members Members#destroy" do
+    context "DELETE /members Members#destroy" do
       it "returns a 401 error saying they are not authenticated" do
         delete "/v1/members/#{@comparable.id}"
         expect(response).to have_http_status(401)

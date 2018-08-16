@@ -50,11 +50,12 @@ class API::V1::RecipesController < ApplicationController
 
   def create
     begin
-      # pre authorize?
-      @recipe = API::V1::RecipeFactoryController.new(recipe_params).result
-      
+      @recipe = RecipeFactory.new(recipe_params.except(:media)).result
+      authorize @recipe
       if @recipe.save
-        # @recipe.factory_callback(@recipe.id)
+        @recipe.media.attach(recipe_params[:attributes][:media]) if recipe_params[:attributes][:media].present?
+        # Callback to have access to @recipe.id to create join_tables.
+        RecipeFactory.new(recipe_params.except(:media)).factory_callback(@recipe.id)
         render json: @recipe, serializer: RecipeSerializer, adapter: :json_api
       else
         render json: { errors: @recipe.errors.full_messages }, status: :unprocessable_entity
@@ -73,6 +74,7 @@ class API::V1::RecipesController < ApplicationController
       authorize @recipe
       @recipe.assign_attributes(recipe_params)
       if @recipe.save
+        RecipeFactory.new(recipe_params.except(:media)).update_callback(@recipe.id)
         render json: @recipe
       else
         render json: { errors: @recipe.errors.full_messages }, status: :unprocessable_entity
@@ -102,26 +104,20 @@ class API::V1::RecipesController < ApplicationController
   private
     def recipe_params
       params[:recipe][:ingredients_list] ||= []
-      params.require(:recipe).permit(
-        :title, 
-        :description, 
-        :member_id, 
+      params.require(:recipe).permit(attributes: [
+        :title,
+        :description,
+        :member_id,
+        :media,
         :ingredients_list => [],
         tags_list: [:title, :description, :mature],
         steps:{
           preparation: [:instruction, :time_length, {:ingredients => []}],
           cooking: [:instruction, :time_length, {:ingredients => []}],
           post_cooking: [:instruction, :time_length, {:ingredients => []}]
-        })
+        }])
     end
     def search_params
       params.require(:filter).permit(:query, :type)
-    end
-    def next_available_id
-      if Recipe.count == 0
-        id = 1
-      else
-        id = Recipe.maximum(:id).next
-      end
     end
 end

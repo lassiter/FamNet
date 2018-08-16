@@ -78,3 +78,14 @@ test:
   username: lassitergregg
   password:
   timeout: 5000
+
+production:
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV["PRODUCTION_DB_HOST"] %>
+  # port: <%= ENV["PRODUCTION_DB_PORT"] %>
+  database: <%= ENV["PRODUCTION_DB_NAME"] %>
+  pool: 5
+  username: <%= ENV["PRODUCTION_DB_LOGIN"]%>
+  password: <%= ENV["PRODUCTION_DB_PASSWORD"] %>
+  timeout: 5000

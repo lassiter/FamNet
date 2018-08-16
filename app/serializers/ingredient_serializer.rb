@@ -3,6 +3,6 @@ class IngredientSerializer < ActiveModel::Serializer
   type "ingredient"
   attributes :id, :title
 
-  link(:self) { api_v1_ingredient_url(object.id) }
+  link(:self) { api_v1_ingredient_path(object.id) }
 
 end

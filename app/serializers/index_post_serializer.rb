@@ -2,7 +2,11 @@ class IndexPostSerializer < ActiveModel::Serializer
   include Rails.application.routes.url_helpers
 
   type 'post'
-  attributes :id, :family_id, :member_id, :body, :location, :edit, :attachment, :locked, :created_at, :updated_at
+  attributes :id, :family_id, :member_id, :body, :location, :edit, :media, :locked, :created_at, :updated_at
+
+  def media # Required to avoid n+1 serialization failures.
+    object.media.attached? ? rails_blob_path(object.media) : nil
+  end
 
   attribute :links do
     id = object.id

@@ -4,8 +4,7 @@ require 'pry'
   factory :post do
 
     body { Faker::Lorem.paragraph(2, false, 4) }
-    attachment { Faker::Name.last_name }
-    location { [Faker::Address.latitude, Faker::Address.longitude] }
+    location { [Faker::Address.latitude.to_f.truncate(15), Faker::Address.longitude.to_f.truncate(15)] }
     created_at { Faker::Date.between(5.months.ago, 3.weeks.ago) }
     updated_at { Faker::Date.between(5.months.ago, 3.weeks.ago) }
     family_id { @family = FactoryBot.create(:family).id }

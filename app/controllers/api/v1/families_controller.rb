@@ -1,68 +1,85 @@
 class API::V1::FamiliesController < ApplicationController
-  #before_action :authenticate_user!
+  before_action :authenticate_api_v1_member!, except: [:index]
   def index
+    # Used for signup selection and selecting show
     @families = Family.all
-    families_list = []
-    @families.each { |family| families_list << IndexFamiliesSerializer.new( family ) }
-    render json: { "families" => families_list }
+    render json: @families, each_serializer: FamilySerializer, adapter: :json_api
   end
 
   def show
-    @family = Family.find(params[:id])
-    list_of_family_members = []
-    Member.joins(:family_members).where(family_members: { family_id: @family.id }).each do |member|
-      serialized_member = DirectoryMemberSerializer.new(member)
-      list_of_family_members << serialized_member
+    begin
+      @family = Family.find(params[:id])
+      authorize @family
+      @family_members = Member.joins(:family_members).where(family_members: { family_id: @family.id })
+      render json: @family_members, each_serializer: DirectoryMemberSerializer, adapter: :json_api
+    rescue Pundit::NotAuthorizedError
+      @family.errors.add(:id, :forbidden, message: "current user is not authorized to view these family members")
+      render :json => { errors: @family.errors.full_messages }, :status => :forbidden
+    rescue ActiveRecord::RecordNotFound
+      render :json => {}, :status => :not_found
     end
-    render json: { "members" => list_of_family_members }
   end
 
   def update
-    @family = Family.find(params[:id])
-    if @family.update(family_params)
-      render json: @family
-    else
-      render json: { errors: @family.errors.full_messages }, status: :unprocessable_entity
-    end
-  end
-
-  def create
-    @family = Family.new(family_params)
-    @family.inspect
-    if @family.save
-      render json: @family
-    else
-      render json: { errors: @family.errors.full_messages }, status: :unprocessable_entity
+    begin
+      @family = Family.find(params[:id])
+      authorize @family
+      if @family.update(family_params)
+        render json: @family
+      else
+        render json: { errors: @family.errors.full_messages }, status: :unprocessable_entity
+      end
+    rescue Pundit::NotAuthorizedError
+      @family.errors.add(:id, :forbidden, message: "current user is not authorized to update this family ")
+      render :json => { errors: @family.errors.full_messages }, :status => :forbidden
+    rescue ActiveRecord::RecordNotFound
+      render :json => {}, :status => :not_found
     end
   end
 
   def destroy
     begin
       @family = Family.find(params[:id])
+      authorize @family
       @family.destroy
       render json: {}, status: :no_content
+    rescue Pundit::NotAuthorizedError
+      @family.errors.add(:id, :forbidden, message: "current user is not authorized to delete this family ")
+      render :json => { errors: @family.errors.full_messages }, :status => :forbidden
     rescue ActiveRecord::RecordNotFound
       render :json => {}, :status => :not_found
     end
   end
+
+  # Mass Invites, if inviting one by one use Invite controller.
+  # Purpose is mainly to initally onboard a family.
   def invite_to
-    emails = params[:invite_emails].split(', ')
-    emails.each do |email|
-      invite = Invite.new(:sender_id => current_user.id, :email => email, family_id => @family.id)
-      if invite.save
-        if invite.recipient != nil
-          InviteMailer.existing_user_invite(invite).deliver
-        else
-          InviteMailer.new_user_invite(invite, new_user_registration_path(:invite_token => @invite.token))
+    begin
+      @family = Family.find(params[:id])
+      authorize @family
+      emails = family_params[:invite_emails].split(', ')
+
+      emails.each do |email|
+        invite = Invite.new(:sender_id => current_user.id, :email => email, :family_id => @family.id)
+        if invite.save
+          InviteMailer.new_user_invite(invite, new_api_v1_member_registration_url(:invite_token => invite.token))
         end
       end
+      invites = Invite.where(:sender_id => current_user.id, :family_id => @family.id)
+      render :json => {data: {"message": "Sent #{invites.count} invites to: #{invites.pluck(:email).join(", ")}"} }
+    rescue Pundit::NotAuthorizedError
+      @family.errors.add(:id, :forbidden, message: "current user is not authorized to delete this family ")
+      render :json => { errors: @family.errors.full_messages }, :status => :forbidden
+    rescue ActiveRecord::RecordNotFound
+      render :json => {}, :status => :not_found
+    end
   end
 
   private
 
   def family_params
     # Whitelist of Params
-    params.permit(:family_name)
+    params.require(:family).permit(:id, :invite_emails, :attributes => [:family_name])
   end
 
 end

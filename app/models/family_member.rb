@@ -4,4 +4,8 @@ class FamilyMember < ApplicationRecord
   
   enum :user_role => [:user, :moderator, :admin, :owner]
 
+  validates_presence_of :member_id
+  validates_presence_of :family_id
+  validates_presence_of :user_role 
+
 end

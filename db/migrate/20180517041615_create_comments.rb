@@ -5,7 +5,6 @@ class CreateComments < ActiveRecord::Migration[5.2]
       t.text :edit
       t.references :commentable, null: false, polymorphic: true, index: true
       t.integer :member_id
-      t.binary :attachment
       t.timestamps
     end
   end

@@ -5,12 +5,12 @@ module Notifiable
 
     has_many :notifications, :as => :notifiable
 
-    after_commit :notify_members
+    after_commit :notify_members, unless: Proc.new { self.class == Member }
   end
-  
+
   def notify_members
     @parent_klass = [Post, Event, Recipe].detect { |i| self.class == i }
-    @child_klass = [Comment, CommentReply, Reaction].detect { |i| self.class == i }
+    @child_klass = [Comment, CommentReply, Reaction, EventRsvp].detect { |i| self.class == i }
 
     # This is the object storing a string of the polymorphic klass for member lookup. (i.e. if the target is Comment then the attribute will be "commentable".)
     @target_attribute_polymorphic_klass = get_polymorphic_klass(self)
@@ -18,14 +18,13 @@ module Notifiable
     get_parent_and_target
     if self.class == @parent_klass # If it's a parent_klass, notify mentioned members.
       notify_mentioned_members if self.mentioned_members.any?
-    elsif @child_klass == Reaction
+    elsif @child_klass == Reaction || EventRsvp
       Notification.create(notifiable_type: @target.class.to_s, notifiable_id: @target.id, member_id: @parent.member_id)
-
     elsif self.class == @child_klass # If it's an child_klass, notify: mentioned members, parent_klass member (if not mentioned), and sibling child_klass.
       notify_mentioned_members if self.mentioned_members.any?
       notify_sibilings if @child_klass == Comment || @child_klass == CommentReply
 
-      if notify_mentioned_members.exclude?(@parent.member_id)
+      if mentioned_members.exclude?(@parent.member_id)
         Notification.create(notifiable_type: @target.class.to_s, notifiable_id: @target.id, member_id: @parent.member_id)
       end
     end
@@ -33,12 +32,11 @@ module Notifiable
 
   def notify_sibilings
     if @child_klass == CommentReply
-      sibilings_member_ids = CommentReply.where(comment_id: self.comment_id).pluck(:member_id).uniq
+      sibilings_member_ids = CommentReply.where(comment_id: self.comment_id).where.not(member_id: self.member_id).pluck(:member_id).uniq
     else # Polymorphic
-      sibilings_member_ids = self.class.where("#{@target_attribute_polymorphic_klass}_type": @parent.class.to_s, "#{@target_attribute_polymorphic_klass}_id": @parent.id).pluck(:member_id).uniq
+      sibilings_member_ids = self.class.where("#{@target_attribute_polymorphic_klass}_type": @parent.class.to_s, "#{@target_attribute_polymorphic_klass}_id": @parent.id).where.not(member_id: self.member_id).pluck(:member_id).uniq
     end
-    
-    
+
     sibilings_member_ids.each do |sibilings_member_id|
       Notification.where(notifiable_type: @target.class.to_s, notifiable_id: @target.id, member_id: sibilings_member_id).first_or_create unless sibilings_member_id == @target.member_id
     end
@@ -67,6 +65,8 @@ module Notifiable
       elsif @child_klass
         if @child_klass == CommentReply
           @parent = Comment.find(@target.comment_id)
+        elsif @child_klass == EventRsvp
+          @parent = Event.find(@target.event_id)
         else # Polymorphic Comment or Reaction
           @parent = self["#{@target_attribute_polymorphic_klass.downcase}_type"].constantize.where(id:self["#{@target_attribute_polymorphic_klass.downcase}_id"]).first
         end

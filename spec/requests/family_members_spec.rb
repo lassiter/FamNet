@@ -5,6 +5,7 @@ RSpec.describe "FamilyMembers", type: :request do
     before do
       @family = FactoryBot.create(:family)
       @comparables = FactoryBot.create_list(:family_member, 5, family_id: @family.id, user_role: "user")
+      @comparables = @comparables.sort { |a,b| a.id <=> b.id }
     end
     context 'Family Owner' do
       before do
@@ -25,12 +26,12 @@ RSpec.describe "FamilyMembers", type: :request do
       end
       it '200 for index' do
         get "/v1/family_members/", :headers => @auth_headers
-        actual = JSON.parse(response.body)["data"]
-        expect(actual.count).to eq(@comparables.count)
-        expect(actual.first["id"]).to eq(@comparables.first.id.to_s)
-        expect(actual.first["attributes"]).to include("family-id")
-        expect(actual.first["attributes"]).to include("member-id")
-        expect(actual.first["attributes"]).to include("user-role")
+        actual_sorted = JSON.parse(response.body)["data"].sort { |a,b| a["id"] <=> b["id"] }
+        expect(actual_sorted.count).to eq(@comparables.count)
+        expect(actual_sorted.first["id"]).to eq(@comparables.first.id.to_s)
+        expect(actual_sorted.first["attributes"]).to include("family-id")
+        expect(actual_sorted.first["attributes"]).to include("member-id")
+        expect(actual_sorted.first["attributes"]).to include("user-role")
         expect(response).to have_http_status(200)
       end
       it '200 for update-put' do

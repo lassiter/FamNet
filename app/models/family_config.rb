@@ -3,7 +3,7 @@ class FamilyConfig < ApplicationRecord
 
   belongs_to :family
 
-  validates :family, presence: true
+  validates :family_id, presence: true, numericality: { only_integer: true }
+  validates :authorization_enabled, inclusion: { in: [ true , false ] }, exclusion: { in: [nil] }
 
-  # validates :authorization_enabled, boolean
 end

@@ -11,7 +11,6 @@ require "action_mailer/railtie"
 require "action_view/railtie"
 require "action_cable/engine"
 # require "sprockets/railtie"
-require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -31,7 +30,7 @@ module FamNet
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
-
+    config.action_controller.asset_host = ENV['HOST'] || 'example.com:3000'
     config.autoload_paths += %W(#{config.root}/lib)
     config.after_initialize do
       Rails.application.routes.default_url_options[:host] = ENV['HOST'] || 'example.com:3000'
