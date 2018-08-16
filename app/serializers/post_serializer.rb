@@ -22,27 +22,3 @@ class PostSerializer < ActiveModel::Serializer
     link(:related) { api_v1_post_reactions_path(object.id) }
   end
 end
-# puts JSON.pretty_generate(PostSerializer.new(p).serializable_hash)
-    # reactions = object.reactions
-    # reactions.loaded? ? reactions : reactions.none
-    
-    # @the_count = {}
-    # Reaction.emotives.map do |key, value|
-    #   value = reactions.where(emotive: key).count
-    #   @the_count.merge!({key => value})
-    # end
-    # {
-    #   @the_count
-    # }
-
-  # "reaction_counts": {
-  #   "count": {
-  #     "heart": 1,
-  #     "like": 1,
-  #     "dislike": 0,
-  #     "haha": 0,
-  #     "wow": 0,
-  #     "sad": 0,
-  #     "angry": 0
-  #   }
-  # },

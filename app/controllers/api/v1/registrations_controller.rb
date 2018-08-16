@@ -1,6 +1,4 @@
 class API::V1::RegistrationsController < DeviseTokenAuth::RegistrationsController
-  require "pry"
-
   def create
     super do |resource|
       begin

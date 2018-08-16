@@ -24,4 +24,3 @@ class CommentSerializer < ActiveModel::Serializer
   has_many :reactions, serializer: ReactionPreviewSerializer
 
 end
-# puts JSON.pretty_generate(CommentSerializer.new(c).serializable_hash)
