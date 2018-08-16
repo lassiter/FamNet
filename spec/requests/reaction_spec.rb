@@ -44,11 +44,11 @@ RSpec.describe "Reaction API", type: :request do
       end
       it 'and getting the index returns the interaction record and match' do
         get "/v1/#{@subject_class}/#{@subject.id}/reactions", :headers => @auth_headers
-        json = JSON.parse(response.body)
-        expected = @comparable.first
-        actual = json["data"].first
-        expect(actual["id"].to_i).to eq(expected.id)
-        expect(actual["type"]).to eq(expected.class.to_s.downcase)
+        expected = @comparable.pluck(:id)
+        JSON.parse(response.body)["data"].each do |data| 
+          expect(data["type"]).to eq("reaction")
+          expect(expected).to include(data["id"].to_i)
+        end
       end
       it 'shows relevant resources' do
         get "/v1/#{@subject_class}/#{@subject.id}/reactions", :headers => @auth_headers
@@ -262,14 +262,14 @@ RSpec.describe "Reaction API", type: :request do
         login_auth(@join_member) # @member = @join_member
         @auth_headers = @member.create_new_auth_token
         get "/v1/#{@index_subject.class.to_s.pluralize.downcase}/#{@index_subject.id}/reactions/", :headers => @auth_headers
-        json = JSON.parse(response.body) 
-        actual = json["data"]
-        actual_ids = []
-        actual.pluck("id").each {|id| actual_ids << id.to_i}
-        comparable_ids = [@authorized_comparable.id, @unauthorized_comparable.id]
-        expect(actual_ids).to eq(comparable_ids.reverse)
-        expect(actual.count).to eq(2)
         expect(response).to have_http_status(200)
+        json = JSON.parse(response.body) 
+        expect(json["data"].count).to eq(2)
+        expected = [@authorized_comparable.id, @unauthorized_comparable.id]
+        json["data"].each do |data| 
+          expect(data["type"]).to eq("reaction")
+          expect(expected).to include(data["id"].to_i)
+        end
       end
     end
     context "POST /reactions Reactions#create" do
