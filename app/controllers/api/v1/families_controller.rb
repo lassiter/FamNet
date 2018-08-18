@@ -19,7 +19,6 @@ class API::V1::FamiliesController < ApplicationController
       render :json => {}, :status => :not_found
     end
   end
-
   def update
     begin
       @family = Family.find(params[:id])

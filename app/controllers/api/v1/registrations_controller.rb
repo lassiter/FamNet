@@ -44,7 +44,7 @@ private
   def create_new_family(family_name:, config: nil)
     new_family = Family.find_or_create_by(family_name: family_name)
     new_family_config = FamilyConfig.find_or_create_by(family_id: new_family.id)
-    new_family_member = FamilyMember.find_or_create_by(family_id: new_family.id, member_id: @resource.id).update_attributes(user_role: "owner")
+    new_family_member = FamilyMember.find_or_create_by(family_id: new_family.id, member_id: @resource.id).update_attributes(user_role: "owner", authorized_at: DateTime.now)
     unless config.nil?
       FamilyConfig.find_by(family_id: new_family.id).update(config)
     end
