@@ -56,8 +56,11 @@ class API::V1::MembersController < ApplicationController
     begin
       @member = Member.find(member_params[:id])
       authorize @member
-      @member.destroy
-      render json: {}, status: :no_content
+      if @member.destroy
+        render json: {}, status: :no_content
+      else
+        render json: { errors: @member.errors.full_messages }, status: :unprocessable_entity
+      end
     rescue Pundit::NotAuthorizedError
       @member.errors.add(:id, :forbidden, message: "current user is not authorized to delete member id: #{params[:id]}")
       render :json => { errors: @member.errors.full_messages }, :status => :forbidden

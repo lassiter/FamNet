@@ -10,7 +10,7 @@ class IndexPostSerializer < ActiveModel::Serializer
 
   attribute :links do
     id = object.id
-    member_id = object.member
+    member_id = object.member_id
     {
       self: api_v1_post_path(id),
       comments: api_v1_post_comments_path(id),
