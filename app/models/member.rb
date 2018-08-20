@@ -17,7 +17,7 @@ class Member < ActiveRecord::Base
   has_many :invitations, :class_name => "Invite", :foreign_key => 'recipient_id'
   has_many :sent_invites, :class_name => "Invite", :foreign_key => 'sender_id'
 
-  has_one_attached :avatar
+  has_one_attached :avatar, dependent: :destroy
 
   enum :gender => [:female, :male, :nonbinary]
 

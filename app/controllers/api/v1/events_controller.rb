@@ -2,12 +2,12 @@ class API::V1::EventsController < ApplicationController
   before_action :authenticate_api_v1_member!
   def index
     begin
-      unless params[:filter].present? && params[:filter][:scope] == "all"
+      if params[:filter].present? && params[:filter][:scope] == "all"
         @events = policy_scope(Event).all
         render json: @events, each_serializer: EventSerializer, adapter: :json_api
       else
         begin
-          @events = policy_scope(Event).where("event_start > ?", Date.today)
+          @events = policy_scope(Event).where("event_start >= ?", Date.today)
           render json: @events
         rescue Pundit::NotDefinedError
           render json: {}, status: :no_content
