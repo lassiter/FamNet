@@ -1,3 +1,5 @@
+This Project has moved to [OhanaOSS/hale](https://github.com/OhanaOSS/hale).
+
 # FamNet
 
 FamNet is a headless private social network api that can connect via a public user interface (WIP) or a private user interface. It can support multiple "families" which have "members" connected through "family members". It's been intentionally designed to allow for self-hosting and distributed use cases.
